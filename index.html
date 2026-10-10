@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="is">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#12161c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hugsanaskrá">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Hugsanaskrá</title>
+
+<style>
+/* ============ LITIR OG GRUNNSTILLINGAR (breyttu hér ef þú vilt annað útlit) ============ */
+:root{
+  --bg:#12161c;        /* bakgrunnur */
+  --card:#1b222b;      /* spjöld */
+  --line:#2a333f;      /* línur */
+  --text:#e6e9ee;      /* texti */
+  --muted:#8b96a5;     /* daufur texti */
+  --accent:#7fb3d5;    /* aðallitur (hnappar) */
+  --danger:#e07a7a;    /* eyða */
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);
+  font:17px/1.45 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif}
+#app{max-width:640px;margin:0 auto;
+  padding:calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 100px)}
+h1{font-size:26px;margin:8px 0 16px;font-weight:600}
+h2{font-size:15px;margin:22px 0 8px;color:var(--muted);font-weight:600;letter-spacing:.03em;text-transform:uppercase}
+.muted{color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin:10px 0}
+.entry{cursor:pointer}
+.entry .when{font-size:14px;color:var(--muted)}
+.entry .snip{margin-top:4px}
+
+/* ---- hnappar: stórir ---- */
+button{font:inherit;color:var(--text);background:var(--card);border:1px solid var(--line);
+  border-radius:14px;min-height:52px;padding:10px 16px;cursor:pointer}
+button:active{opacity:.7}
+.big{width:100%;font-size:19px;margin:8px 0}
+.primary{background:var(--accent);color:#0d1319;border-color:var(--accent);font-weight:600}
+.danger{color:var(--danger);border-color:var(--danger)}
+.row{display:flex;gap:10px;align-items:center}
+.row>*{flex:1}
+
+/* ---- form ---- */
+label{display:block;font-weight:600;margin:18px 0 6px}
+label small{font-weight:400;color:var(--muted)}
+input[type=text],input[type=datetime-local],input[type=date],textarea,select{
+  width:100%;font:inherit;color:var(--text);background:var(--card);
+  border:1px solid var(--line);border-radius:12px;padding:12px}
+textarea{min-height:84px;resize:vertical}
+input[type=range]{width:100%;accent-color:var(--accent);height:36px}
+
+/* ---- tilfinningar ---- */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:44px;padding:6px 14px;border-radius:22px;border:2px solid var(--c,#888);background:transparent}
+.chip.on{background:var(--c,#888);color:#111;font-weight:600}
+.chip.base{min-height:48px}
+.chip.base.open{background:var(--c);color:#111}
+.chip.mid{font-weight:600}
+.group{margin-top:12px;padding:12px;border-radius:14px;border:1px dashed var(--c)}
+.mid{margin-top:12px}
+.words{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.sel{background:var(--card);border-left:6px solid var(--c);border-radius:12px;padding:8px 12px;margin:8px 0}
+.sel .row{gap:6px}
+.sel b{flex:1}
+.sel .val{flex:0 0 auto;font-size:20px;font-weight:600;min-width:28px;text-align:right}
+.sel button{flex:0 0 auto;min-height:40px;min-width:40px;padding:0}
+.free{display:flex;gap:8px;margin-top:10px}
+.free input{flex:1}
+.free button{flex:0 0 auto}
+
+/* ---- val: hjálpaði ---- */
+.seg{display:flex;gap:8px}
+.seg button{flex:1}
+.seg button.on{background:var(--accent);color:#0d1319;border-color:var(--accent);font-weight:600}
+
+/* ---- yfirsýn ---- */
+.kpis{display:flex;gap:12px}
+.kpis div{flex:1;text-align:center}
+.kpis b{display:block;font-size:30px}
+.kpis span{color:var(--muted);font-size:14px}
+.bar{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:15px}
+.bar .name{flex:0 0 38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar .track{flex:1;background:var(--line);border-radius:6px;height:14px;overflow:hidden}
+.bar .fill{height:100%;background:var(--c,var(--accent))}
+.bar .n{flex:0 0 auto;min-width:60px;text-align:right;color:var(--muted);font-size:14px}
+
+/* ---- neðri valmynd ---- */
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:#0e1217;border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;border-radius:0;background:transparent;min-height:58px;font-size:14px;color:var(--muted)}
+nav button.on{color:var(--accent);font-weight:600}
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 80px);transform:translateX(-50%);
+  background:#2d3947;padding:10px 18px;border-radius:20px;opacity:0;transition:opacity .25s;pointer-events:none}
+#toast.show{opacity:1}
+.save-bar{position:sticky;bottom:calc(env(safe-area-inset-bottom) + 70px);padding-top:10px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<nav id="nav">
+  <button data-a="nav" data-v="home">Heim</button>
+  <button data-a="nav" data-v="list">Færslur</button>
+  <button data-a="nav" data-v="stats">Yfirsýn</button>
+  <button data-a="nav" data-v="data">Gögn</button>
+</nav>
+<div id="toast"></div>
+<input type="file" id="importFile" accept=".json,application/json" hidden>
+
+<script>
+/* =====================================================================
+   HUGSANASKRÁ – einföld thought record fyrir símann.
+   Öll gögn vistast í localStorage í þessum síma. Ekkert er sent neitt.
+   Skipulag skjalsins:
+     1. TILFINNINGAHJÓLIÐ (orðalisti – breyttu hér til að bæta við orðum)
+     2. GÖGN (hlaða/vista)
+     3. HJÁLPARFÖLL
+     4. SKJÁIR (heim, færslur, ný færsla, yfirsýn, gögn)
+     5. AÐGERÐIR (hvað gerist þegar ýtt er á takka)
+   ===================================================================== */
+
+/* ---------- 1. TILFINNINGAHJÓLIÐ ----------
+   Uppbygging: grunntilfinning -> undirflokkur -> orð.
+   Til að bæta við orði: settu það í "words" á réttum stað. */
+const WHEEL = [
+  {name:'Hamingja', color:'#fdfdc0', mids:[
+    {name:'Ánægja',      words:['Gleði','Kátína']},
+    {name:'Ró',          words:['Þakklæti','Sátt']},
+    {name:'Áhugi',       words:['Forvitni','Hrifning']},
+    {name:'Stolt',       words:['Sjálfstraust','Hreykni']},
+    {name:'Viðurkenning',words:['Samþykki','Staðfesta']},
+    {name:'Kraftur',     words:['Hugrekki','Sköpun']},
+    {name:'Traust',      words:['Ást','Þakklæti']},
+    {name:'Samkennd',    words:['Góðvild','Innileiki']},
+    {name:'Bjartsýni',   words:['Eftirvænting','Von']}
+  ]},
+  {name:'Undrun', color:'#c9c9f5', mids:[
+    {name:'Hissa',     words:['Forviða','Vonbrigði']},
+    {name:'Ráðaleysi', words:['Svekkelsi','Ringlun']},
+    {name:'Agndofa',   words:['Furða','Hneykslun']},
+    {name:'Spenna',    words:['Ákefð','Kappsemi']}
+  ]},
+  {name:'Skömm', color:'#d2f7b8', mids:[
+    {name:'Niðurlæging',words:['Feimni','Smán','Minnimáttarkennd','Höfnun','Vandræðalegt']},
+    {name:'Sektarkennd',words:['Samviskubit','Auðmýkt']},
+    {name:'Iðrun',      words:['Skammast','Eftirsjá']}
+  ]},
+  {name:'Ótti', color:'#fde0b0', mids:[
+    {name:'Hræðsla', words:['Skelfing','Beygur']},
+    {name:'Kvíði',   words:['Óró','Áhyggjur']},          /* á myndinni stendur "Óróí" – athugaðu */
+    {name:'Ógnun',   words:['Óöryggi','Skelkun']},
+    {name:'Álag',    words:['Taugaveiklun','Streita']}
+  ]},
+  {name:'Reiði', color:'#ffb8da', mids:[
+    {name:'Vonbrigði',  words:['Sár','Móðgun']},
+    {name:'Öfund',      words:['Afbrýðisemi','Öfundsýki']},
+    {name:'Árásargirni',words:['Bræði','Æsingur']},
+    {name:'Pirringur',  words:['Skapstyggð','Ergelsi']},
+    {name:'Óánægja',    words:['Gremja','Biturð','Hneykslun']},
+    {name:'Vanþóknun',  words:['Fyrirlitning','Dómharka']}
+  ]},
+  {name:'Viðbjóður', color:'#c4c4c4', mids:[
+    {name:'Andúð',      words:['Andstyggð','Fyrirlitning']},
+    {name:'Mislíka',    words:['Blöskra','Hatur']},
+    {name:'Viðurstyggð',words:['Klígja','Óbeit','Ónot','Ógeð']}
+  ]},
+  {name:'Depurð', color:'#29a3e0', mids:[
+    {name:'Þróttleysi',words:['Slen','Dugleysi']},
+    {name:'Þjáning',   words:['Angist','Kvöl']},
+    {name:'Örvænting', words:['Böl','Hjálparleysi','Vonleysi']},
+    {name:'Sorg',      words:['Hryggð','Söknuður','Doði']},
+    {name:'Leiði',     words:['Minnimáttarkennd','Einmannaleiki','Áhugaleysi']}
+  ]}
+];
+
+/* Orð -> litur (fyrsta grunntilfinning sem orðið finnst undir).
+   Orð sem koma fyrir á tveimur stöðum (t.d. Vonbrigði) telja sem sama orð í yfirsýn. */
+const WORD_COLOR = {};
+WHEEL.forEach(b=>{
+  if(!WORD_COLOR[b.name]) WORD_COLOR[b.name]=b.color;
+  b.mids.forEach(m=>{
+    if(!WORD_COLOR[m.name]) WORD_COLOR[m.name]=b.color;
+    m.words.forEach(w=>{ if(!WORD_COLOR[w]) WORD_COLOR[w]=b.color; });
+  });
+});
+const FREE_COLOR = '#9aa5b1';                       // litur fyrir frjálsan texta
+const colorOf = w => WORD_COLOR[w] || FREE_COLOR;
+
+/* ---------- 2. GÖGN ---------- */
+const KEY   = 'hugsanaskra_v1';        // færslurnar
+const META  = 'hugsanaskra_meta';      // t.d. hvenær síðast var tekið afrit
+const DRAFT = 'hugsanaskra_draft';     // ókláruð ný færsla (týnist ekki ef appinu er lokað)
+
+function readJSON(k, fallback){
+  try{ const v = JSON.parse(localStorage.getItem(k)); return v ?? fallback; }
+  catch(e){ return fallback; }
+}
+function writeJSON(k, v){
+  try{ localStorage.setItem(k, JSON.stringify(v)); }
+  catch(e){ toast('Tókst ekki að vista!'); }
+}
+
+let entries = readJSON(KEY, []);       // [{id,time,place,before,thought,alt,emotions:[{w,s}],did,helped}]
+let meta    = readJSON(META, {});
+const saveEntries = () => writeJSON(KEY, entries);
+const saveMeta    = () => writeJSON(META, meta);
+
+/* Biðja símann um að eyða ekki gögnunum sjálfkrafa (virkar ekki alls staðar, skaðar ekki) */
+if(navigator.storage && navigator.storage.persist) navigator.storage.persist();
+
+/* ---------- 3. HJÁLPARFÖLL ---------- */
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2,'0');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+
+/* Tími er geymdur sem staðartími: "2026-10-10T20:17" */
+const toLocalInput = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const dateOnly = d => toLocalInput(d).slice(0,10);
+const fmtTime = s => {
+  const d = new Date(s);
+  return d.toLocaleString('is-IS',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+};
+const sorted = () => entries.slice().sort((a,b)=> b.time.localeCompare(a.time));   // nýjast efst
+const inDays = (e, days) => (Date.now() - new Date(e.time)) <= days*86400000;
+
+/* Meðalstyrkur */
+const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+const fmtNum = n => n===null ? '–' : (Math.round(n*10)/10).toString().replace('.',',');   // 6,2
+const entryAvg = e => avg(e.emotions.map(x=>x.s));
+const allAvg = list => avg(list.flatMap(e=>e.emotions.map(x=>x.s)));
+
+let toastTimer;
+function toast(msg){
+  const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+/* ----- Orðatalning fyrir "algengustu kveikjur" -----
+   Íslenska beygist (skóli, skólanum, skóla), svo við teljum á orðstofni = fyrstu 5 stafir.
+   Þetta er gróft en nóg til að sjá mynstur. Bættu við STOP ef smáorð eru að trufla. */
+const STOP = new Set(('og í á að var ég við með það sem til en um af hann hún þeir þau ekki voru fyrir frá eftir '+
+  'vera verið hafði mig mér minn mín mínum sig sér svo þá þegar þar hér út inn upp niður eða ef því þetta þessi '+
+  'þess hjá er hans hennar okkur þú þig þér þarf vil kom fór áður rétt bara mjög nú aðeins sá sú hef hafa hafði '+
+  'sagði sagði fékk fæ vildi gat get verð varð voru eins samt alla allt allir engin enginn aftur strax þannig '+
+  'þeirra þeim þeirri hvað hvernig hvar hver sem þar þarna líka bæði heldur eða nema fyrst').split(' '));
+const STEM_LEN = 5;
+
+function topWords(texts, n){
+  const count = {};      // stofn -> fjöldi færslna
+  const shown = {};      // stofn -> hvaða mynd orðsins kemur oftast fyrir (til að sýna)
+  texts.forEach(t=>{
+    const seen = new Set();
+    (String(t||'').toLowerCase().match(/\p{L}+/gu) || []).forEach(w=>{
+      if(w.length<4 || STOP.has(w)) return;
+      const st = w.slice(0,STEM_LEN);
+      if(seen.has(st)) return;          // telja hvert orð einu sinni í hverri færslu
+      seen.add(st);
+      count[st] = (count[st]||0)+1;
+      shown[st] = shown[st] || {};
+      shown[st][w] = (shown[st][w]||0)+1;
+    });
+  });
+  return Object.keys(count)
+    .map(st=>({
+      word: Object.entries(shown[st]).sort((a,b)=>b[1]-a[1])[0][0],
+      n: count[st]
+    }))
+    .filter(x=>x.n>=2)                   // aðeins orð sem koma fyrir oftar en einu sinni
+    .sort((a,b)=>b.n-a.n).slice(0,n);
+}
+
+/* Lárétt súla */
+function bars(rows, color){
+  const max = Math.max(1, ...rows.map(r=>r.v));
+  return rows.map(r=>`
+    <div class="bar" ${r.title?`title="${esc(r.title)}"`:''}>
+      <div class="name">${esc(r.name)}</div>
+      <div class="track"><div class="fill" style="width:${r.v/max*100}%;--c:${r.color||color||'var(--accent)'}"></div></div>
+      <div class="n">${esc(r.label ?? r.v)}</div>
+    </div>`).join('') || '<p class="muted">Ekki nóg af gögnum enn.</p>';
+}
+
+/* ---------- 4. SKJÁIR ---------- */
+let view = 'home';          // home | list | stats | data | form | detail
+let current = null;         // id færslu sem er opin
+let draft = null;           // færslan sem er í vinnslu í forminu
+let openBase = null;        // hvaða grunntilfinning er útvíkkuð á hjólinu
+let statsDays = 30;         // tímabil í yfirsýn
+let exFrom = '', exTo = '';  // tímabil fyrir útflutning
+
+function go(v, id){
+  view = v; current = id ?? null;
+  render();
+  window.scrollTo(0,0);
+}
+
+function render(){
+  const app = $('app');
+  const f = {home:viewHome, list:viewList, stats:viewStats, data:viewData, form:viewForm, detail:viewDetail}[view];
+  app.innerHTML = f();
+  if(view==='form') fillForm();
+  document.querySelectorAll('#nav button').forEach(b=>{
+    const on = b.dataset.v===view || (view==='form'&&b.dataset.v==='home') || (view==='detail'&&b.dataset.v==='list');
+    b.classList.toggle('on', on);
+  });
+}
+
+/* ----- Heim ----- */
+function backupBanner(){
+  if(!entries.length) return '';
+  const last = meta.lastBackup ? (Date.now()-new Date(meta.lastBackup))/86400000 : Infinity;
+  if(last <= 30) return '';
+  return `<div class="card"><b>Mundu eftir afriti</b><br><span class="muted">${meta.lastBackup?'Síðasta afrit er meira en mánaðargamalt.':'Þú hefur ekki tekið afrit enn.'}</span>
+    <button class="big" data-a="nav" data-v="data">Taka afrit</button></div>`;
+}
+function viewHome(){
+  const list = sorted(), last = list[0], week = entries.filter(e=>inDays(e,7));
+  return `<h1>Hugsanaskrá</h1>
+    ${backupBanner()}
+    <button class="big primary" data-a="new">+ Ný færsla</button>
+    <div class="card"><div class="kpis">
+      <div><b>${week.length}</b><span>færslur síðustu 7 daga</span></div>
+      <div><b>${fmtNum(allAvg(week))}</b><span>meðalstyrkur</span></div>
+    </div></div>
+    <h2>Síðasta færsla</h2>
+    ${last ? entryCard(last) : '<p class="muted">Engar færslur enn. Ýttu á „Ný færsla“.</p>'}`;
+}
+
+/* ----- Færslulisti ----- */
+function entryCard(e){
+  const emo = e.emotions.map(x=>`${esc(x.w)} ${x.s}`).join(', ');
+  const snip = e.thought || e.before || e.did || '';
+  return `<div class="card entry" data-a="open" data-id="${esc(e.id)}">
+    <div class="when">${esc(fmtTime(e.time))}${e.place?' · '+esc(e.place):''}</div>
+    ${emo?`<div><b>${emo}</b></div>`:''}
+    ${snip?`<div class="snip muted">${esc(snip.length>110?snip.slice(0,110)+'…':snip)}</div>`:''}
+  </div>`;
+}
+function viewList(){
+  const list = sorted();
+  return `<h1>Færslur</h1>` +
+    (list.length ? list.map(entryCard).join('') : '<p class="muted">Engar færslur enn.</p>');
+}
+
+/* ----- Opin færsla (lesa) ----- */
+function viewDetail(){
+  const e = entries.find(x=>x.id===current);
+  if(!e) return '<p>Færsla fannst ekki.</p>';
+  const row = (label, val) => val ? `<h2>${label}</h2><div class="card">${esc(val).replace(/\n/g,'<br>')}</div>` : '';
+  return `<h1>${esc(fmtTime(e.time))}</h1>
+    ${row('Staður', e.place)}
+    ${row('Hvað gerðist rétt áður', e.before)}
+    ${row('Hugsun sem kom', e.thought)}
+    ${row('Annað sjónarhorn', e.alt)}
+    ${e.emotions.length?`<h2>Tilfinningar</h2><div class="card">${e.emotions.map(x=>
+      `<div class="bar"><div class="name" style="color:${colorOf(x.w)}">${esc(x.w)}</div>
+       <div class="track"><div class="fill" style="width:${x.s*10}%;--c:${colorOf(x.w)}"></div></div>
+       <div class="n">${x.s}/10</div></div>`).join('')}</div>`:''}
+    ${row('Hvað ég gerði', e.did)}
+    ${e.helped?`<h2>Hjálpaði það?</h2><div class="card">${esc(e.helped)}</div>`:''}
+    <div class="row" style="margin-top:20px">
+      <button data-a="edit" data-id="${esc(e.id)}">Breyta</button>
+      <button class="danger" data-a="del" data-id="${esc(e.id)}">Eyða</button>
+    </div>`;
+}
+
+/* ----- Ný færsla / breyta ----- */
+function newDraft(){
+  return {id:newId(), time:toLocalInput(new Date()), place:'', before:'', thought:'', alt:'',
+          emotions:[], did:'', helped:''};
+}
+function recentPlaces(){
+  const seen = [];
+  sorted().forEach(e=>{ if(e.place && !seen.includes(e.place)) seen.push(e.place); });
+  return seen.slice(0,6);
+}
+function viewForm(){
+  const places = recentPlaces();
+  return `<h1>${entries.some(e=>e.id===draft.id)?'Breyta færslu':'Ný færsla'}</h1>
+
+    <label for="f_time">1. Tími og dagsetning</label>
+    <input type="datetime-local" id="f_time">
+
+    <label for="f_place">2. Staður</label>
+    <input type="text" id="f_place" autocomplete="off">
+    ${places.length?`<div class="chips" style="margin-top:8px">${places.map(p=>
+      `<button class="chip" data-a="place" data-p="${esc(p)}">${esc(p)}</button>`).join('')}</div>`:''}
+
+    <label for="f_before">3. Hvað gerðist rétt áður?</label>
+    <textarea id="f_before"></textarea>
+
+    <label for="f_thought">4. Hugsun sem kom</label>
+    <textarea id="f_thought"></textarea>
+
+    <label for="f_alt">Annað sjónarhorn <small>(valfrjálst)</small></label>
+    <textarea id="f_alt"></textarea>
+
+    <label>5. Tilfinning <small>(veldu eina eða fleiri)</small></label>
+    <div id="selected"></div>
+    <div id="wheel"></div>
+    <div class="free">
+      <input type="text" id="f_free" placeholder="Annað orð…" autocomplete="off">
+      <button data-a="addFree">Bæta við</button>
+    </div>
+
+    <label for="f_did">6. Hvað ég gerði</label>
+    <textarea id="f_did"></textarea>
+
+    <label>Hjálpaði það? <small>(valfrjálst)</small></label>
+    <div class="seg" id="helped"></div>
+
+    <div class="save-bar">
+      <button class="big primary" data-a="save">Vista</button>
+      <button class="big" data-a="cancel">Hætta við</button>
+    </div>`;
+}
+/* Setja gildi draft í reitina */
+function fillForm(){
+  $('f_time').value = draft.time;
+  ['place','before','thought','alt','did'].forEach(k=> $('f_'+k).value = draft[k]);
+  renderSelected(); renderWheel(); renderHelped();
+}
+/* Valdar tilfinningar með sleða fyrir hverja */
+function renderSelected(){
+  $('selected').innerHTML = draft.emotions.map(x=>`
+    <div class="sel" style="--c:${colorOf(x.w)}">
+      <div class="row"><b>${esc(x.w)}</b><span class="val">${x.s}</span>
+        <button data-a="unpick" data-w="${esc(x.w)}" aria-label="Fjarlægja">×</button></div>
+      <input type="range" min="0" max="10" step="1" value="${x.s}" data-w="${esc(x.w)}">
+    </div>`).join('');
+}
+/* Tilfinningahjólið: grunntilfinning -> undirflokkur -> orð */
+function renderWheel(){
+  const chip = (w,c,cls='') => {
+    const on = draft.emotions.some(e=>e.w===w);
+    return `<button class="chip ${cls}${on?' on':''}" style="--c:${c}" data-a="pick" data-w="${esc(w)}">${esc(w)}</button>`;
+  };
+  const open = WHEEL.find(b=>b.name===openBase);
+  $('wheel').innerHTML =
+    `<div class="chips">${WHEEL.map(b=>
+      `<button class="chip base${openBase===b.name?' open':''}" style="--c:${b.color}" data-a="toggleBase" data-b="${esc(b.name)}">${esc(b.name)}</button>`).join('')}</div>` +
+    (open ? `<div class="group" style="--c:${open.color}">
+        ${chip(open.name, open.color, 'mid')}
+        ${open.mids.map(m=>`<div class="mid">${chip(m.name,open.color,'mid')}
+          <div class="words">${m.words.map(w=>chip(w,open.color)).join('')}</div></div>`).join('')}
+      </div>` : '');
+}
+function renderHelped(){
+  $('helped').innerHTML = ['já','smá','nei'].map(v=>
+    `<button class="${draft.helped===v?'on':''}" data-a="help" data-v="${v}">${v[0].toUpperCase()+v.slice(1)}</button>`).join('');
+}
+
+/* ----- Yfirsýn ----- */
+function mondayOf(d){
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  x.setDate(x.getDate() - ((x.getDay()+6)%7));      // mánudagur
+  return x;
+}
+function viewStats(){
+  /* Færslur á viku: síðustu 8 vikur */
+  const thisMon = mondayOf(new Date()), weeks = [];
+  for(let i=7;i>=0;i--){
+    const m = new Date(thisMon); m.setDate(m.getDate()-7*i);
+    weeks.push({m, key:dateOnly(m), n:0});
+  }
+  entries.forEach(e=>{
+    const k = dateOnly(mondayOf(new Date(e.time)));
+    const w = weeks.find(x=>x.key===k); if(w) w.n++;
+  });
+
+  /* Tímabilið sem valið er */
+  const list = statsDays===0 ? entries : entries.filter(e=>inDays(e,statsDays));
+
+  /* Tilfinningar: fjöldi + meðalstyrkur á hverja */
+  const emo = {};
+  list.forEach(e=>e.emotions.forEach(x=>{
+    (emo[x.w] = emo[x.w] || {n:0, sum:0}); emo[x.w].n++; emo[x.w].sum += x.s;
+  }));
+  const emoRows = Object.entries(emo).sort((a,b)=>b[1].n-a[1].n).slice(0,8).map(([w,o])=>({
+    name:w, v:o.n, color:colorOf(w), label:`${o.n}× · ø ${fmtNum(o.sum/o.n)}`
+  }));
+
+  /* Kveikjur = algeng orð í "Hvað gerðist rétt áður" */
+  const trig = topWords(list.map(e=>e.before), 8).map(x=>({name:x.word, v:x.n, label:x.n+'×'}));
+
+  /* Hvað hjálpaði: hlutfall + algeng orð í "Hvað ég gerði" þegar svarið var já/smá */
+  const h = {já:0, smá:0, nei:0};
+  list.forEach(e=>{ if(h[e.helped]!==undefined) h[e.helped]++; });
+  const helpedAnswers = h.já+h.smá+h.nei;
+  const helpWords = topWords(list.filter(e=>e.helped==='já'||e.helped==='smá').map(e=>e.did), 8)
+    .map(x=>({name:x.word, v:x.n, label:x.n+'×'}));
+
+  return `<h1>Yfirsýn</h1>
+    <select data-change="statsDays">
+      ${[[7,'Síðustu 7 dagar'],[30,'Síðustu 30 dagar'],[90,'Síðustu 90 dagar'],[0,'Allt']].map(([v,t])=>
+        `<option value="${v}"${statsDays===v?' selected':''}>${t}</option>`).join('')}
+    </select>
+
+    <div class="card"><div class="kpis">
+      <div><b>${list.length}</b><span>færslur</span></div>
+      <div><b>${fmtNum(allAvg(list))}</b><span>meðalstyrkur (0–10)</span></div>
+    </div></div>
+
+    <h2>Færslur á viku</h2>
+    <div class="card">${bars(weeks.map(w=>({
+      name: `${w.m.getDate()}.${w.m.getMonth()+1}.`, v:w.n, label:w.n, title:'Vika frá '+w.key})))}</div>
+
+    <h2>Algengustu tilfinningar</h2>
+    <div class="card">${bars(emoRows)}</div>
+
+    <h2>Algengustu kveikjur</h2>
+    <div class="card">${bars(trig)}
+      <p class="muted" style="font-size:14px;margin:8px 0 0">Orð sem koma oft fyrir í „Hvað gerðist rétt áður“. Gróf talning.</p></div>
+
+    <h2>Hvað hjálpaði</h2>
+    <div class="card">
+      ${helpedAnswers ? bars([
+        {name:'Já', v:h.já, label:h.já}, {name:'Smá', v:h.smá, label:h.smá}, {name:'Nei', v:h.nei, label:h.nei}
+      ]) : '<p class="muted">Merktu „Hjálpaði það?“ í færslum til að sjá þetta.</p>'}
+      ${helpWords.length?`<p class="muted" style="margin:12px 0 4px">Algeng orð þegar það hjálpaði (já/smá):</p>${bars(helpWords)}`:''}
+    </div>`;
+}
+
+/* ----- Gögn: útflutningur, afrit, innflutningur ----- */
+function viewData(){
+  if(!exTo){ const d=new Date(); exTo=dateOnly(d); d.setDate(d.getDate()-14); exFrom=dateOnly(d); }
+  return `<h1>Gögn</h1>
+    <h2>Flytja út færslur (fyrir sálfræðing)</h2>
+    <div class="card">
+      <div class="row">
+        <div><label for="ex_from" style="margin-top:0">Frá</label><input type="date" id="ex_from" value="${exFrom}"></div>
+        <div><label for="ex_to" style="margin-top:0">Til</label><input type="date" id="ex_to" value="${exTo}"></div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button data-a="exportTxt">Textaskjal</button>
+        <button data-a="exportCsv">CSV (Excel)</button>
+      </div>
+      <p class="muted" style="font-size:14px">Á símanum opnast deilingarvalmynd. CSV notar semíkommu og UTF-8, svo íslenskir stafir opnast rétt í Excel.</p>
+    </div>
+
+    <h2>Afrit og innflutningur</h2>
+    <div class="card">
+      <p style="margin-top:0">${entries.length} færslur í símanum.<br>
+      <span class="muted">Síðasta afrit: ${meta.lastBackup?esc(fmtTime(meta.lastBackup)):'aldrei'}</span></p>
+      <button class="big" data-a="backup">Taka afrit (JSON)</button>
+      <button class="big" data-a="importPick">Lesa inn afrit</button>
+      <p class="muted" style="font-size:14px">Innlestur bætir við færslum sem vantar. Núverandi færslum er ekki eytt.</p>
+    </div>`;
+}
+
+/* ---------- 5. AÐGERÐIR ---------- */
+
+/* Deila skrá (deilingarvalmynd á síma) eða sækja hana (tölva) */
+async function shareOrDownload(name, mime, text){
+  const file = new File([text], name, {type:mime});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file], title:name}); return; }
+    catch(e){ if(e.name==='AbortError') return; }      // hætt við -> gera ekkert
+  }
+  const url = URL.createObjectURL(new Blob([text],{type:mime}));
+  const a = document.createElement('a'); a.href=url; a.download=name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+
+/* Færslur á völdu tímabili, elsta fyrst (hentar vel í lestri) */
+function rangeEntries(){
+  exFrom = $('ex_from').value; exTo = $('ex_to').value;
+  return entries.filter(e=>{ const d=e.time.slice(0,10); return d>=exFrom && d<=exTo; })
+                .sort((a,b)=>a.time.localeCompare(b.time));
+}
+const fmtEmo = e => e.emotions.map(x=>`${x.w} (${x.s}/10)`).join(', ');
+
+function exportTxt(){
+  const list = rangeEntries();
+  if(!list.length) return toast('Engar færslur á þessu tímabili');
+  let t = `HUGSANASKRÁ\nTímabil: ${exFrom} – ${exTo}\nFjöldi færslna: ${list.length}\n`;
+  list.forEach(e=>{
+    t += `\n--- ${fmtTime(e.time)} ---\n`;
+    if(e.place)   t += `Staður: ${e.place}\n`;
+    if(e.before)  t += `Rétt áður: ${e.before}\n`;
+    if(e.thought) t += `Hugsun: ${e.thought}\n`;
+    if(e.alt)     t += `Annað sjónarhorn: ${e.alt}\n`;
+    if(e.emotions.length) t += `Tilfinningar: ${fmtEmo(e)}\n`;
+    if(e.did)     t += `Hvað ég gerði: ${e.did}\n`;
+    if(e.helped)  t += `Hjálpaði það: ${e.helped}\n`;
+  });
+  shareOrDownload(`hugsanaskra_${exFrom}_${exTo}.txt`, 'text/plain', t);
+}
+function exportCsv(){
+  const list = rangeEntries();
+  if(!list.length) return toast('Engar færslur á þessu tímabili');
+  const q = s => '"' + String(s ?? '').replace(/"/g,'""').replace(/\r?\n/g,' ') + '"';
+  const head = ['Tími','Staður','Rétt áður','Hugsun','Annað sjónarhorn','Tilfinningar','Meðalstyrkur','Hvað ég gerði','Hjálpaði'];
+  const rows = list.map(e=>[
+    e.time.replace('T',' '), e.place, e.before, e.thought, e.alt, fmtEmo(e),
+    fmtNum(entryAvg(e)), e.did, e.helped
+  ].map(q).join(';'));
+  const csv = '\ufeff' + [head.map(q).join(';'), ...rows].join('\r\n');   // \ufeff = UTF-8 BOM fyrir Excel
+  shareOrDownload(`hugsanaskra_${exFrom}_${exTo}.csv`, 'text/csv;charset=utf-8', csv);
+}
+function backup(){
+  const data = {app:'hugsanaskra', version:1, exported:new Date().toISOString(), entries};
+  meta.lastBackup = new Date().toISOString(); saveMeta();
+  shareOrDownload(`hugsanaskra_afrit_${dateOnly(new Date())}.json`, 'application/json', JSON.stringify(data,null,2));
+  setTimeout(render, 300);
+}
+/* Hreinsa innflutta færslu svo hún brjóti ekki appið */
+function cleanEntry(e){
+  return {
+    id: String(e.id || newId()), time: String(e.time || toLocalInput(new Date())),
+    place:String(e.place||''), before:String(e.before||''), thought:String(e.thought||''),
+    alt:String(e.alt||''), did:String(e.did||''),
+    helped: ['já','smá','nei'].includes(e.helped) ? e.helped : '',
+    emotions: Array.isArray(e.emotions) ? e.emotions.map(x=>({w:String(x.w), s:Math.min(10,Math.max(0,+x.s||0))})) : []
+  };
+}
+function importData(file){
+  const r = new FileReader();
+  r.onload = () => {
+    try{
+      const d = JSON.parse(r.result);
+      if(!d || !Array.isArray(d.entries)) throw new Error();
+      const have = new Set(entries.map(e=>e.id));
+      const add = d.entries.map(cleanEntry).filter(e=>!have.has(e.id));
+      if(!confirm(`Bæta við ${add.length} færslum? (${d.entries.length-add.length} eru þegar til)`)) return;
+      entries = entries.concat(add); saveEntries(); toast('Innlestri lokið'); render();
+    }catch(e){ toast('Skráin er ekki gilt afrit'); }
+  };
+  r.readAsText(file);
+}
+
+/* Ókláruð færsla vistast sjálfkrafa */
+const saveDraft = () => { if(!entries.some(e=>e.id===draft.id)) writeJSON(DRAFT, draft); };
+
+/* Allir takkar fara í gegnum data-a="nafn" */
+const actions = {
+  nav:   t => go(t.dataset.v),
+  new:   () => { draft = readJSON(DRAFT, null) || newDraft(); openBase=null; go('form'); },
+  open:  t => go('detail', t.dataset.id),
+  edit:  t => { draft = JSON.parse(JSON.stringify(entries.find(e=>e.id===t.dataset.id))); openBase=null; go('form'); },
+  del:   t => { if(confirm('Eyða þessari færslu?')){ entries = entries.filter(e=>e.id!==t.dataset.id); saveEntries(); toast('Færslu eytt'); go('list'); } },
+  cancel:() => { if(confirm('Hætta við? Færslan vistast ekki.')){ localStorage.removeItem(DRAFT); go('home'); } },
+  save:  () => {
+    if(!draft.thought.trim() && !draft.before.trim() && !draft.emotions.length) return toast('Fylltu út eitthvað fyrst');
+    const i = entries.findIndex(e=>e.id===draft.id);
+    if(i>=0) entries[i]=draft; else entries.push(draft);
+    saveEntries(); localStorage.removeItem(DRAFT); toast('Vistað'); go('home');
+  },
+  place: t => { draft.place=t.dataset.p; $('f_place').value=t.dataset.p; saveDraft(); },
+  toggleBase: t => { openBase = openBase===t.dataset.b ? null : t.dataset.b; renderWheel(); },
+  pick:  t => {
+    const w=t.dataset.w, i=draft.emotions.findIndex(e=>e.w===w);
+    if(i>=0) draft.emotions.splice(i,1); else draft.emotions.push({w, s:5});
+    renderSelected(); renderWheel(); saveDraft();
+  },
+  unpick:t => { draft.emotions = draft.emotions.filter(e=>e.w!==t.dataset.w); renderSelected(); renderWheel(); saveDraft(); },
+  addFree:() => {
+    const w = $('f_free').value.trim(); if(!w) return;
+    if(!draft.emotions.some(e=>e.w===w)) draft.emotions.push({w, s:5});
+    $('f_free').value=''; renderSelected(); renderWheel(); saveDraft();
+  },
+  help:  t => { draft.helped = draft.helped===t.dataset.v ? '' : t.dataset.v; renderHelped(); saveDraft(); },
+  exportTxt, exportCsv, backup,
+  importPick: () => $('importFile').click()
+};
+document.addEventListener('click', e=>{
+  const t = e.target.closest('[data-a]');
+  if(t && actions[t.dataset.a]) actions[t.dataset.a](t);
+});
+
+/* Texti og sleðar í forminu */
+document.addEventListener('input', e=>{
+  const t = e.target;
+  if(view!=='form') return;
+  if(t.id && t.id.startsWith('f_') && t.id!=='f_free'){
+    draft[t.id.slice(2)] = t.value; saveDraft();
+  }else if(t.type==='range'){
+    const em = draft.emotions.find(x=>x.w===t.dataset.w);
+    if(em){ em.s = +t.value; t.closest('.sel').querySelector('.val').textContent = t.value; saveDraft(); }
+  }
+});
+/* Val í fellilistum */
+document.addEventListener('change', e=>{
+  if(e.target.dataset.change==='statsDays'){ statsDays=+e.target.value; render(); }
+});
+$('importFile').addEventListener('change', e=>{
+  if(e.target.files[0]) importData(e.target.files[0]);
+  e.target.value='';
+});
+
+/* ---------- Ræsing ---------- */
+render();
+/* Þjónustuskrá = appið virkar án nets */
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
