@@ -36,7 +36,7 @@ Yfirsýn (mynstur) birtist þegar skráningar eru 5 eða fleiri.
 3. Opnaðu slóðina í Safari (iPhone) eða Chrome (Android) > Add to Home Screen.
 
 ## Uppfæra
-Þegar þú breytir einhverri skrá, hækkaðu `VERSION` í `sw.js` (t.d. `hugsanaskra-v8`).
+Þegar þú breytir einhverri skrá, hækkaðu `VERSION` í `sw.js` (t.d. `hugsanaskra-v9`).
 Annars sækir síminn gömlu útgáfuna úr skyndiminni.
 
 ## Gögn og afrit
