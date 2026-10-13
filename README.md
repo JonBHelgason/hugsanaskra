@@ -1,87 +1,45 @@
 # Hugsanaskrá
 
-Einfalt app fyrir símann til að skrá hugsanaskrár (thought record) á íslensku. Hugsað til að nota milli tíma hjá sálfræðingi.
+Einfalt app (PWA) á íslensku til að skrá hugsanaskrár (HAM / CBT thought record) milli tíma hjá sálfræðingi.
+Virkar án nets. Öll gögn vistast í símanum (localStorage). Ekkert er sent á netþjón.
 
-- Virkar í síma (iPhone og Android) og á tölvu, líka án nets.
-- **Öll gögn vistast bara í símanum** (localStorage). Engin skráning, enginn netþjónn og ekkert er sent neitt.
-- Ekkert uppsetningarferli: bara nokkrar skrár, engin forritasöfn.
+## Hvernig skráning virkar
+Hver skráning hefur fjóra dálka. Strjúktu á milli þeirra eða notaðu punktana neðst. Örin efst fer í yfirlit.
 
-> Appið er skráningartól, ekki meðferð. Það kemur ekki í staðinn fyrir sálfræðing eða lækni.
+1. **Aðstæður**: titill, lýsing og merki (Þema, Fólk, Staður). Hægt að hafa fleiri en eina.
+2. **Tilfinning**: hringur (grunntilfinning > undirflokkur > orð), skap-mælir, leit eða eigið orð. Styrkur 1–10.
+3. **Hugsun**: ein eða fleiri hugsanir.
+4. **Endurmat**: opnast þegar lágmarki er náð (ein aðstæða með titli og lýsingu, ein tilfinning, ein hugsun).
+   Fyrir hverja hugsun: trú 0–100%, hugsunarvillur (13), tvær spurningar, trú aftur. Líðan er metin aftur einu sinni ("Kvíði: 5 → 3").
 
-## Hvað appið gerir
+Skráning vistast sjálfkrafa. Þar til lágmarki er náð er hún merkt **Drög**.
+Yfirsýn (mynstur) birtist þegar skráningar eru 5 eða fleiri.
 
-**Ný færsla (3 skref)**
-
-1. **Tilfinning:** veldu eina eða fleiri.
-   - *Hringur:* 7 grunntilfinningar í hring. Ýttu á eina og undirflokkarnir spretta út, ýttu á undirflokk og orðin spretta út. Ýtt á miðjuna fer til baka.
-   - *Skap-mælir:* 4 litaðir reitir (orka og þægindi) með orðum undir.
-   - Leit að orði og frjáls texti ef orðið vantar.
-2. **Styrkur og samhengi:** sleði 0–10 fyrir hverja tilfinningu, tími og dagsetning, og merki fyrir **stað**, **fólk** og **hvað ég var að gera**. Þú getur bætt við eigin merkjum með „+“.
-3. **Hugsun:** hvað gerðist rétt áður, hugsun sem kom, annað sjónarhorn (valfrjálst), hvað ég gerði og hvort það hjálpaði (já / smá / nei).
-
-„Vista“ er í boði frá skrefi 2, svo færsla tekur innan við mínútu. Hægt er að opna færslu seinna og bæta við hugsuninni.
-
-**Annað**
-
-- **Forsíða:** kveðja eftir tíma dags, vikuræma (hver dagur fær lit sterkustu tilfinningar dagsins) og síðasta færsla.
-- **Færslur:** listi, nýjast efst. Opna, breyta og eyða.
-- **Dagatal:** litaðir dagar, ýttu á dag til að sjá færslur hans.
-- **Yfirsýn:** færslur á viku, meðalstyrkur, algengustu tilfinningar, merki (fjöldi og meðalstyrkur), algeng orð í „Hvað gerðist rétt áður“ og hvað hjálpaði.
-- **Útflutningur:** textaskjal eða CSV fyrir valið tímabil, til að senda eða sýna sálfræðingi. CSV notar semíkommu og UTF-8, svo íslenskir stafir opnast rétt í Excel.
-- **Afrit og innflutningur (JSON):** svo þú tapir ekki gögnum ef þú skiptir um síma. Innlestur bætir við færslum sem vantar og eyðir engu.
-
-## Setja upp á símann (GitHub Pages)
-
-Þú þarft ókeypis GitHub-aðgang.
-
-1. Búðu til nýtt **opinbert** repository (t.d. `hugsanaskra`) og hladdu upp öllum skrám úr þessari möppu (Add file → Upload files → Commit).
-2. Farðu í **Settings → Pages**. Veldu *Deploy from a branch*, branch `main` og möppuna `/ (root)`. Vistaðu.
-3. Eftir um mínútu birtist slóð, t.d. `https://nafnið-þitt.github.io/hugsanaskra/`.
-4. Opnaðu slóðina **einu sinni með neti**:
-   - **iPhone:** Safari → deilingartakkinn → *Bæta á heimaskjá*.
-   - **Android:** Chrome → valmynd (⋮) → *Bæta á heimaskjá* eða *Setja upp app*.
-5. Eftir þetta virkar appið án nets.
-
-Repository er opinbert, en þar er bara kóðinn. **Færslurnar þínar fara aldrei af símanum og eru ekki á GitHub.**
-
-## Uppfæra appið
-
-1. Skiptu út `index.html` (og `sw.js` ef hún breyttist) á GitHub.
-2. Hækkaðu töluna í `VERSION` í `sw.js` (t.d. `hugsanaskra-v3` → `hugsanaskra-v4`). Annars sækir síminn gömlu útgáfuna úr skyndiminni.
-3. Opnaðu appið með neti. Ef gamla útgáfan sést enn, lokaðu appinu alveg og opnaðu það aftur.
-
-Gögnin þín haldast óbreytt við uppfærslu.
-
-## Skrárnar
-
+## Skrár
 | Skrá | Hlutverk |
 |---|---|
-| `index.html` | Allt appið (útlit, kóði og gögn í einni skrá) |
-| `manifest.json` | Nafn, litir og tákn, svo hægt sé að setja appið á heimaskjá |
-| `sw.js` | Þjónustuskrá (service worker): geymir appið í símanum svo það virki án nets |
-| `icon-192.png`, `icon-512.png` | Tákn appsins |
+| `index.html` | Grind |
+| `style.css` | Útlit og litir |
+| `data.js` | Tilfinningaorð, hugsunarvillur, merki, textar (hér er auðveldast að breyta) |
+| `app.js` | Gögn, reglur, heim, dagatal, yfirsýn, útflutningur |
+| `form.js` | Skráningin (dálkar, gluggar, hringur) og ræsing |
+| `sw.js` | Þjónustuskrá (offline) |
+| `manifest.json`, `icon-*.png` | Uppsetning á heimaskjá |
 
-## Breyta sjálfur
+## Setja upp á GitHub Pages
+1. Settu allar skrárnar í repository.
+2. Settings > Pages > Deploy from a branch > `main` / root.
+3. Opnaðu slóðina í Safari (iPhone) eða Chrome (Android) > Add to Home Screen.
 
-Kóðinn er einfaldur og vel athugasemdum merktur. Helstu staðir í `index.html`:
+## Uppfæra
+Þegar þú breytir einhverri skrá, hækkaðu `VERSION` í `sw.js` (t.d. `hugsanaskra-v8`).
+Annars sækir síminn gömlu útgáfuna úr skyndiminni.
 
-- **Litir og útlit:** `:root { … }` efst í `<style>`.
-- **Tilfinningaorð:** `WHEEL` (hringurinn) og `QUADS` (skap-mælirinn).
-- **Sjálfgefin merki:** `TAG_GROUPS`.
-- **Orð sem eru ekki talin sem kveikjur:** `STOP`.
-- **Bil og stærð hringsins:** `drawStage()`.
+## Gögn og afrit
+- Gögn: `hugsanaskra_v2` í localStorage. Gömlum færslum (v1) er breytt sjálfkrafa. Gamla skráin er ekki eydd.
+- Gögn > **Taka afrit (JSON)** og **Lesa inn afrit** (tekur líka við afritum úr gömlu útgáfunni).
+- Gögn > **Textaskjal** fyrir tímabil, til að sýna sálfræðingi.
+- Taktu afrit reglulega. Ef vafragögnum er eytt, hverfa skráningarnar.
 
-## Öryggi og takmarkanir
-
-- **Taktu afrit reglulega** (Gögn → Taka afrit). Ef síminn eyðir gögnum vefsíðna, eða þú hreinsar gögn vafrans, tapast færslurnar. Appið minnir þig á eftir 30 daga.
-- iPhone getur eytt gögnum vefsíðna sem eru lítið notaðar. Að hafa appið á heimaskjá dregur úr því, en afrit er eina örugga leiðin.
-- Engin lykilorð eða PIN-kóði enn. Hver sem getur opnað símann þinn getur opnað appið.
-- Engar áminningar. Vefapp án netþjóns getur ekki sent áreiðanlegar tilkynningar. Notaðu vekjara eða áminningu í símanum.
-- „Algengustu kveikjur“ telja orð eftir fyrstu 5 stöfum (til að ná beygingum). Þetta er gróf talning. Merkin (staður, fólk, hvað ég var að gera) eru áreiðanlegri.
-
-## Hugmyndir að næstu útgáfum
-
-- Lýsing á hverri tilfinningu (haldið lengi á orði).
-- PIN-kóði.
-- Valfrjáls reitur „trú á hugsun (0–100)“ fyrir og eftir.
-- Valfrjáls merki fyrir líkamleg einkenni.
+## Athugið
+Hugsunarvillutextarnir í `data.js` eru tillaga (Burns, *Feeling Good*, 1980; Beck, 1976). Láttu sálfræðinginn yfirfara þá.

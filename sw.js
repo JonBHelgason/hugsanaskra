@@ -1,7 +1,8 @@
 /* Þjónustuskrá (service worker): geymir appið í símanum svo það virki án nets.
-   Þegar þú breytir index.html: hækkaðu VERSION um 1, annars sækir síminn gömlu útgáfuna. */
-const VERSION = 'hugsanaskra-v3';
-const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
+   Þegar þú breytir einhverri skrá: hækkaðu VERSION um 1, annars sækir síminn gömlu útgáfuna. */
+const VERSION = 'hugsanaskra-v7';
+const FILES = ['./', './index.html', './style.css', './data.js', './app.js', './form.js',
+               './manifest.json', './icon-192.png', './icon-512.png'];
 
 /* Setja upp: sækja allar skrár í skyndiminni */
 self.addEventListener('install', e => {
