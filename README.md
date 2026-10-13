@@ -1,18 +1,22 @@
 # Hugsanaskrá
 
-Einfalt app (PWA) á íslensku til að skrá hugsanaskrár (HAM / CBT thought record) milli tíma hjá sálfræðingi.
+Einfalt app (PWA, ljóst þema) á íslensku til að skrá hugsanaskrár (HAM / CBT thought record) milli tíma hjá sálfræðingi.
 Virkar án nets. Öll gögn vistast í símanum (localStorage). Ekkert er sent á netþjón.
 
 ## Hvernig skráning virkar
 Hver skráning hefur fjóra dálka. Strjúktu á milli þeirra eða notaðu punktana neðst. Örin efst fer í yfirlit.
 
-1. **Aðstæður**: titill, lýsing og merki (Þema, Fólk, Staður). Hægt að hafa fleiri en eina.
-2. **Tilfinning**: hringur (grunntilfinning > undirflokkur > orð), skap-mælir, leit eða eigið orð. Styrkur 1–10.
-3. **Hugsun**: ein eða fleiri hugsanir.
+1. **Aðstæður**: ein aðstæða með titli, lýsingu og merkjum (Þema, Fólk, Staður). Reitirnir eru beint í dálknum.
+2. **Tilfinning**: valið er beint í dálknum. Hringur (grunntilfinning > undirflokkur > orð), skap-mælir, leit eða eigið orð. Styrkur 1–10.
+3. **Hugsun**: textareitur. Með + kemur nýr reitur fyrir neðan, koll af kolli.
 4. **Endurmat**: opnast þegar lágmarki er náð (ein aðstæða með titli og lýsingu, ein tilfinning, ein hugsun).
-   Fyrir hverja hugsun: trú 0–100%, hugsunarvillur (13), tvær spurningar, trú aftur. Líðan er metin aftur einu sinni ("Kvíði: 5 → 3").
+   Fyrir hverja hugsun: trú 0–100%, hugsunarvillur (13), tvær spurningar, trú aftur. „Meta líðan aftur“ ("Kvíði: 5 → 3") opnast þegar trú fyrir og eftir er metin á öllum hugsunum.
 
-Skráning vistast sjálfkrafa. Þar til lágmarki er náð er hún merkt **Drög**.
+Skráning vistast sjálfkrafa. Á forsíðu er hún merkt með lit:
+- **Rautt** (Klára 1–3): lágmarki ekki náð.
+- **Gult** (Endurmat eftir): lágmarki náð, Endurmat ekki búið.
+- **Grænt** (Klárað): trú fyrir og eftir metin á öllum hugsunum.
+
 Yfirsýn (mynstur) birtist þegar skráningar eru 5 eða fleiri.
 
 ## Skrár

@@ -150,6 +150,12 @@ function missingList(r){
 const hasMin   = r => !missingList(r).length;
 const isDraft  = r => !hasMin(r);           // drög = lágmarki ekki náð
 const hasContent = r => r.situations.some(s=>s.title.trim()||s.desc.trim()) || r.emotions.length || r.thoughts.some(t=>t.text.trim());
+/* Staða skráningar: r = vantar 1–3 (rautt), y = endurmat eftir (gult), g = klárað (grænt).
+   Endurmat er klárað þegar trú fyrir og eftir er metin á hverri hugsun. */
+const reDone = r => hasMin(r) && r.thoughts.filter(t=>t.text.trim()).every(t=>t.belief1!==null && t.belief2!==null);
+const recStatus = r => !hasMin(r) ? 'r' : reDone(r) ? 'g' : 'y';
+const STATUS_TXT = {r:'Klára 1–3', y:'Endurmat eftir', g:'Klárað'};
+const stBadge = r => { const s = recStatus(r); return `<span class="st st-${s}">${STATUS_TXT[s]}</span>`; };
 const thoughtWorked = t => t.belief1!==null || t.belief2!==null || t.errors.length || t.q1.trim() || t.q2.trim();
 const sorted = () => entries.slice().sort((a,b)=> b.time.localeCompare(a.time));   // nýjast efst
 
@@ -226,8 +232,8 @@ function entryCard(r){
   const titles = r.situations.map(s=>s.title).filter(Boolean).join(' · ');
   const emo = r.emotions.map(x=>`${esc(x.w)} ${x.s}${x.s2!==null?' → '+x.s2:''}`).join(', ');
   const th = (r.thoughts.find(t=>t.text.trim()) || {}).text || '';
-  return `<div class="card entry" data-a="open" data-id="${esc(r.id)}">
-    <div class="when">${esc(fmtTime(r.time))}${isDraft(r)?' · <span class="todo">Drög</span>':''}</div>
+  return `<div class="card entry st-${recStatus(r)}" data-a="open" data-id="${esc(r.id)}">
+    <div class="when">${esc(fmtTime(r.time))} ${stBadge(r)}</div>
     ${titles?`<div><b>${esc(titles)}</b></div>`:''}
     ${emo?`<div class="small">${emo}</div>`:''}
     ${th?`<div class="snip muted">${esc(snip(th,110))}</div>`:''}
@@ -258,13 +264,13 @@ function viewDetail(){
     r.legacy.alt ? row('Annað sjónarhorn', esc(r.legacy.alt)) : '',
     r.legacy.did ? row('Ég gerði', esc(r.legacy.did) + (r.legacy.helped ? ` <span class="badge">· Hjálpaði: ${esc(r.legacy.helped)}</span>` : '')) : ''
   ].join('') : '';
-  const miss = missingList(r);
-  return `<h1 class="dh">${esc(fmtTime(r.time))}${isDraft(r)?' · <span class="todo">Drög</span>':''}</h1>
+  const miss = missingList(r), stt = recStatus(r);
+  return `<h1 class="dh">${esc(fmtTime(r.time))} ${stBadge(r)}</h1>
     ${ctx?`<p class="dctx">${ctx}</p>`:''}
     <div class="dbox">${sits}${emo}${ths}${lg}</div>
     ${miss.length?`<p class="dctx" style="margin:12px 0 0">Vantar: <span>${esc(miss.join(', '))}</span></p>`:''}
     <div class="dact">
-      <button class="${miss.length?'primary':''}" data-a="editRec" data-id="${esc(r.id)}">${miss.length?'Halda áfram':'Breyta'}</button>
+      <button class="${stt!=='g'?'primary':''}" data-a="editRec" data-id="${esc(r.id)}">${stt!=='g'?'Halda áfram':'Breyta'}</button>
       <button class="danger" data-a="delRec" data-id="${esc(r.id)}">Eyða</button>
     </div>`;
 }
