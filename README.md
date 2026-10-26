@@ -10,12 +10,12 @@ Hver skráning hefur fjóra dálka. Strjúktu á milli þeirra eða notaðu punk
 2. **Tilfinning**: valið er beint í dálknum. Hringur (grunntilfinning > undirflokkur > orð), skap-mælir, leit eða eigið orð. Styrkur 1–10.
 3. **Hugsun**: textareitur. Með + kemur nýr reitur fyrir neðan, koll af kolli.
 4. **Endurmat**: opnast þegar lágmarki er náð (ein aðstæða með titli og lýsingu, ein tilfinning, ein hugsun).
-   Fyrir hverja hugsun: trú 0–100%, hugsunarvillur (13), tvær spurningar, trú aftur. „Meta líðan aftur“ ("Kvíði: 5 → 3") opnast þegar trú fyrir og eftir er metin á öllum hugsunum.
+   Fyrir hverja hugsun: trú 0–100%, hugsunarvillur (13), tvær spurningar, trú aftur. „Meta líðan aftur“ ("Kvíði: 5 → 3") opnast þegar trú eftir endurmat er metin á a.m.k. einni hugsun. Dagar í vikuræmu og dagatali eru litaðir með blöndu allra tilfinninga dagsins.
 
 Skráning vistast sjálfkrafa. Á forsíðu er hún merkt með lit:
 - **Rautt** (Klára 1–3): lágmarki ekki náð.
 - **Gult** (Endurmat eftir): lágmarki náð, Endurmat ekki búið.
-- **Grænt** (Klárað): trú fyrir og eftir metin á öllum hugsunum.
+- **Grænt** (Klárað): þú ýttir á „Ljúka skráningu“ neðst í Endurmat. Ef þú bætir við nýrri hugsun verður skráningin gul aftur.
 
 Yfirsýn (mynstur) birtist þegar skráningar eru 5 eða fleiri.
 
@@ -36,7 +36,7 @@ Yfirsýn (mynstur) birtist þegar skráningar eru 5 eða fleiri.
 3. Opnaðu slóðina í Safari (iPhone) eða Chrome (Android) > Add to Home Screen.
 
 ## Uppfæra
-Þegar þú breytir einhverri skrá, hækkaðu `VERSION` í `sw.js` (t.d. `hugsanaskra-v10`).
+Þegar þú breytir einhverri skrá, hækkaðu `VERSION` í `sw.js` (t.d. `hugsanaskra-v11`).
 Annars sækir síminn gömlu útgáfuna úr skyndiminni.
 
 ## Gögn og afrit

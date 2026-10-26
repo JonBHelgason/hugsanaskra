@@ -57,7 +57,7 @@ function bars(rows){
    { id, time, situations:[{id,title,desc,tags:{tema,folk,stadur}}],
      emotions:[{w, s (1-10), s2 (1-10 eftir endurmat eða null)}],
      thoughts:[{id,text,belief1,errors:[],q1,q2,belief2}],   // belief = 0-100 eða null
-     unlockShown, legacy }                                    // legacy = gömul svæði (hvað ég gerði o.fl.) */
+     unlockShown, lokid, legacy }                                    // legacy = gömul svæði (hvað ég gerði o.fl.) */
 const KEY      = 'hugsanaskra_v2';       // skráningarnar
 const KEY_V1   = 'hugsanaskra_v1';       // gamla útgáfan (er ekki eytt)
 const META     = 'hugsanaskra_meta';     // afrit, tilfinningaútlit, eigin merki
@@ -77,7 +77,7 @@ function cleanRec(r){
   const n = v => (v===null||v===undefined||v==='') ? null : Math.min(10, Math.max(1, Math.round(+v||1)));
   const p = v => (v===null||v===undefined||v==='') ? null : Math.min(100, Math.max(0, Math.round(+v||0)));
   const lg = r.legacy;
-  return {
+  const o = {
     id: String(r.id || newId()),
     time: String(r.time || toLocalInput(new Date())),
     situations: (r.situations||[]).map(s=>({
@@ -92,6 +92,12 @@ function cleanRec(r){
     unlockShown: !!r.unlockShown,
     legacy: lg ? {did:String(lg.did||''), helped:String(lg.helped||''), alt:String(lg.alt||'')} : null
   };
+  /* lokið: nýja gerðin geymir það. Eldri skráningar teljast lokið ef trú fyrir og eftir var metin (gamla reglan). */
+  const txt = o.thoughts.filter(t=>t.text.trim());
+  o.lokid = r.lokid!==undefined ? !!r.lokid
+    : o.situations.some(s=>s.title.trim()&&s.desc.trim()) && o.emotions.length>0 && txt.length>0
+      && txt.every(t=>t.belief1!==null && t.belief2!==null);
+  return o;
 }
 
 /* Flytja færslu úr gömlu útgáfunni (v1) yfir í nýju gerðina. Ekkert tapast:
@@ -151,8 +157,9 @@ const hasMin   = r => !missingList(r).length;
 const isDraft  = r => !hasMin(r);           // drög = lágmarki ekki náð
 const hasContent = r => r.situations.some(s=>s.title.trim()||s.desc.trim()) || r.emotions.length || r.thoughts.some(t=>t.text.trim());
 /* Staða skráningar: r = vantar 1–3 (rautt), y = endurmat eftir (gult), g = klárað (grænt).
-   Endurmat er klárað þegar trú fyrir og eftir er metin á hverri hugsun. */
-const reDone = r => hasMin(r) && r.thoughts.filter(t=>t.text.trim()).every(t=>t.belief1!==null && t.belief2!==null);
+   Skráning er klár þegar notandi ýtir á „Ljúka skráningu“. */
+const reDone = r => hasMin(r) && r.lokid;      // lokið = notandi ýtti á „Ljúka skráningu“
+const rateOpen = r => r.thoughts.some(t=>t.text.trim() && t.belief2!==null);   // „meta líðan aftur“ opnast þegar trú eftir er metin
 const recStatus = r => !hasMin(r) ? 'r' : reDone(r) ? 'g' : 'y';
 const STATUS_TXT = {r:'Klára 1–3', y:'Endurmat eftir', g:'Klárað'};
 const stBadge = r => { const s = recStatus(r); return `<span class="st st-${s}">${STATUS_TXT[s]}</span>`; };
@@ -160,7 +167,7 @@ const thoughtWorked = t => t.belief1!==null || t.belief2!==null || t.errors.leng
 const sorted = () => entries.slice().sort((a,b)=> b.time.localeCompare(a.time));   // nýjast efst
 
 function newRec(time){
-  return {id:newId(), time: time || toLocalInput(new Date()), situations:[], emotions:[], thoughts:[], unlockShown:false, legacy:null};
+  return {id:newId(), time: time || toLocalInput(new Date()), situations:[], emotions:[], thoughts:[], unlockShown:false, lokid:false, legacy:null};
 }
 /* Öll merki skráningar (sameinuð úr öllum aðstæðum) */
 function recTags(r){
@@ -169,12 +176,16 @@ function recTags(r){
   return o;
 }
 const dayEntries = key => entries.filter(e=>e.time.slice(0,10)===key);
-/* Litur dags = litur sterkustu tilfinningar dagsins */
+/* Litur dags = blanda allra tilfinninga dagsins. Geirar eftir samanlögðum styrk hvers lits (þrír stærstu). */
 function dayColor(key){
   const es = dayEntries(key); if(!es.length) return null;
-  let best = null;
-  es.forEach(e=>e.emotions.forEach(x=>{ if(!best || x.s>best.s) best = x; }));
-  return best ? colorOf(best.w) : FREE_COLOR;
+  const w = {};
+  es.forEach(e=>e.emotions.forEach(x=>{ const c = colorOf(x.w); w[c] = (w[c]||0) + x.s; }));
+  const l = Object.entries(w).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  if(!l.length) return FREE_COLOR;
+  if(l.length===1) return l[0][0];
+  const tot = l.reduce((a,x)=>a+x[1],0); let acc = 0;
+  return 'conic-gradient(' + l.map(([c,v])=>{ const from = acc/tot*100; acc += v; return `${c} ${from.toFixed(1)}% ${(acc/tot*100).toFixed(1)}%`; }).join(',') + ')';
 }
 
 /* ---------- 4. SKJÁIR ---------- */

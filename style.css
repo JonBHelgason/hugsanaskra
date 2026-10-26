@@ -178,7 +178,7 @@ button.hub{background:var(--c);color:#111;font-weight:700}
 .week .d{flex:1;text-align:center;font-size:13px;color:var(--muted)}
 .dayc{width:100%;aspect-ratio:1/1;min-height:40px;border-radius:50%;padding:0;margin-top:4px;
   background:var(--card);border:1px solid var(--line);color:var(--muted);font-size:18px}
-.dayc.has{background:var(--c);border-color:var(--c);color:#111}
+.dayc.has{background:var(--c);border-color:#0002;color:#111}
 .dayc.today{border:2px solid var(--accent)}
 .dayc.future{opacity:.35}
 /* ---- dagatal ---- */
@@ -188,7 +188,7 @@ button.hub{background:var(--c);color:#111;font-weight:700}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
 .cal .wd{text-align:center;color:var(--muted);font-size:13px}
 .cal button{aspect-ratio:1/1;min-height:40px;padding:0;border-radius:12px;font-size:15px;background:var(--card);border:1px solid var(--line)}
-.cal button.has{background:var(--c);color:#111;border-color:var(--c);font-weight:600}
+.cal button.has{background:var(--c);color:#111;border-color:#0002;font-weight:600}
 .cal button.today{border:2px solid var(--accent)}
 .cal button.sel{outline:2px solid var(--text);outline-offset:1px}
 

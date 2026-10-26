@@ -66,6 +66,7 @@ function colSummary(i){
   if(i===1) return rec.emotions.length ? rec.emotions.map(x=>`${x.w} ${x.s}`).join(', ') : 'Ekkert skráð enn';
   if(i===2){ const t = rec.thoughts.filter(t=>t.text.trim()); return t.length ? snip(t[0].text,50)+(t.length>1?` (+${t.length-1})`:'') : 'Ekkert skráð enn'; }
   if(!hasMin(rec)) return 'Læst – vantar lágmark';
+  if(rec.lokid) return 'Lokið';
   const n = rec.thoughts.filter(t=>t.text.trim()&&thoughtWorked(t)).length;
   return n ? `${n} hugsun${n===1?'':'ir'} unnin${n===1?'':'ar'}` : 'Veldu hugsun til að vinna með';
 }
@@ -161,15 +162,16 @@ function colTh(){
 function colRe(){
   if(!hasMin(rec)) return `<div class="lockbox"><div style="font-size:40px">🔒</div><p>Endurmat opnast þegar þú hefur fyllt út:</p>
     <ul>${missingList(rec).map(m=>`<li>${esc(m)}</li>`).join('')}</ul></div>`;
-  const done = reDone(rec);
-  const rate = rec.emotions.length ? `<div class="card tap ratecard${done?'':' locked'}" data-a="openRate"><b>Meta líðan aftur</b><div class="small">${
-    done ? rec.emotions.map(x=>`${esc(x.w)}: ${x.s}${x.s2!==null?' → '+x.s2:''}`).join(' · ') : 'Opnast þegar Endurmati allra hugsana er lokið (trú fyrir og eftir).'}</div></div>` : '';
+  const open = rateOpen(rec);
+  const rate = rec.emotions.length ? `<div class="card tap ratecard${open?'':' locked'}" data-a="openRate"><b>Meta líðan aftur</b><div class="small">${
+    open ? rec.emotions.map(x=>`${esc(x.w)}: ${x.s}${x.s2!==null?' → '+x.s2:''}`).join(' · ') : 'Opnast þegar þú hefur metið trú á a.m.k. einni hugsun eftir endurmat.'}</div></div>` : '';
   const cards = rec.thoughts.map((t,i)=>{
     if(!t.text.trim()) return '';
     const sub = [t.belief1!==null?`Trú ${t.belief1}%${t.belief2!==null?' → '+t.belief2+'%':''}`:'', t.errors.length?`${t.errors.length} hugsunarvillur`:''].filter(Boolean).join(' · ');
     return `<div class="card tap" data-a="editCard" data-i="${i}"><b>${esc(snip(t.text,120))}</b>${sub?`<div class="small">${sub}</div>`:''}</div>`;
   }).join('');
-  return `<p class="expl">${TXT.col4}</p>${cards}${rate}`;
+  return `<p class="expl">${TXT.col4}</p>${cards}${rate}
+    <button class="big primary" data-a="finish" style="margin-top:18px">${rec.lokid?'Skráning lokið · Fara heim':'Ljúka skráningu'}</button>`;
 }
 
 /* ---------- 3. GLUGGAR (ofan á skráningu) ---------- */
@@ -403,7 +405,8 @@ const actions = {
     if(k>=0) t.errors.splice(k,1); else t.errors.push(n);
     touch(); renderSheet(true);
   },
-  openRate: () => { if(!reDone(rec)) return toast('Ljúktu fyrst Endurmati hugsananna'); rateTouched = false; openSheet({type:'rate'}); },
+  finish: () => { rec.lokid = true; touch(); toast('Skráningu lokið'); leaveForm('home'); },
+  openRate: () => { if(!rateOpen(rec)) return toast('Metið fyrst trú á hugsun eftir endurmat'); rateTouched = false; openSheet({type:'rate'}); },
 
   /* merki */
   tag: el => {
@@ -454,7 +457,7 @@ document.addEventListener('input', e=>{
   const i = +el.dataset.i, v = el.value;
   if(k==='sit-title'){ rec.situations[i].title = v; touch(); }
   else if(k==='sit-desc'){ rec.situations[i].desc = v; touch(); }
-  else if(k==='th-text'){ rec.thoughts[i].text = v; touch(); }
+  else if(k==='th-text'){ const t = rec.thoughts[i], was = t.text.trim(); t.text = v; if(!was && v.trim()) rec.lokid = false; touch(); }
   else if(k==='q1'){ rec.thoughts[i].q1 = v; touch(); }
   else if(k==='q2'){ rec.thoughts[i].q2 = v; touch(); }
   else if(k==='b1' || k==='b2'){ rec.thoughts[i][k==='b1'?'belief1':'belief2'] = +v; $(k+'v').textContent = v+'%'; touch(); }
