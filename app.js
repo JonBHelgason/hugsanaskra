@@ -57,7 +57,9 @@ function bars(rows){
    { id, time, situations:[{id,title,desc,tags:{tema,folk,stadur}}],
      emotions:[{w, s (1-10), s2 (1-10 eftir endurmat eða null)}],
      thoughts:[{id,text,belief1,errors:[],q1,q2,belief2}],   // belief = 0-100 eða null
-     unlockShown, lokid, legacy }                                    // legacy = gömul svæði (hvað ég gerði o.fl.) */
+     unlockShown, lokid, ci, legacy }
+     thoughts[].lead = id leiðandi hugsunar ef hugsunin er tengd öðrum (leiðandi hugsun geymir endurmatið), emos = tilfinningar sem fylgdu hugsuninni
+     ci = bara líðan skráð (engar aðstæður eða hugsun)                                    // legacy = gömul svæði (hvað ég gerði o.fl.) */
 const KEY      = 'hugsanaskra_v2';       // skráningarnar
 const KEY_V1   = 'hugsanaskra_v1';       // gamla útgáfan (er ekki eytt)
 const META     = 'hugsanaskra_meta';     // afrit, tilfinningaútlit, eigin merki
@@ -87,9 +89,10 @@ function cleanRec(r){
     emotions: (r.emotions||[]).map(x=>({w:String(x.w), s:n(x.s)||5, s2:n(x.s2)})),
     thoughts: (r.thoughts||[]).map(t=>({
       id:String(t.id||newId()), text:String(t.text||''), belief1:p(t.belief1), errors:arr(t.errors),
-      q1:String(t.q1||''), q2:String(t.q2||''), belief2:p(t.belief2)
+      q1:String(t.q1||''), q2:String(t.q2||''), belief2:p(t.belief2),
+      lead:String(t.lead||''), emos:arr(t.emos)
     })),
-    unlockShown: !!r.unlockShown,
+    unlockShown: !!r.unlockShown, ci: !!r.ci,
     legacy: lg ? {did:String(lg.did||''), helped:String(lg.helped||''), alt:String(lg.alt||'')} : null
   };
   /* lokið: nýja gerðin geymir það. Eldri skráningar teljast lokið ef trú fyrir og eftir var metin (gamla reglan). */
@@ -154,21 +157,33 @@ function missingList(r){
   return m;
 }
 const hasMin   = r => !missingList(r).length;
-const isDraft  = r => !hasMin(r);           // drög = lágmarki ekki náð
+const isDraft  = r => !r.ci && !hasMin(r);   // drög = lágmarki ekki náð (líðan-skráning er aldrei drög)
 const hasContent = r => r.situations.some(s=>s.title.trim()||s.desc.trim()) || r.emotions.length || r.thoughts.some(t=>t.text.trim());
 /* Staða skráningar: r = vantar 1–3 (rautt), y = endurmat eftir (gult), g = klárað (grænt).
    Skráning er klár þegar notandi ýtir á „Ljúka skráningu“. */
 const reDone = r => hasMin(r) && r.lokid;      // lokið = notandi ýtti á „Ljúka skráningu“
 const rateOpen = r => r.thoughts.some(t=>t.text.trim() && t.belief2!==null);   // „meta líðan aftur“ opnast þegar trú eftir er metin
-const recStatus = r => !hasMin(r) ? 'r' : reDone(r) ? 'g' : 'y';
-const STATUS_TXT = {r:'Klára 1–3', y:'Endurmat eftir', g:'Klárað'};
+const recStatus = r => r.ci ? 'b' : !hasMin(r) ? 'r' : reDone(r) ? 'g' : 'y';
+const STATUS_TXT = {r:'Klára 1–3', y:'Endurmat eftir', g:'Klárað', b:'Líðan'};
 const stBadge = r => { const s = recStatus(r); return `<span class="st st-${s}">${STATUS_TXT[s]}</span>`; };
 const thoughtWorked = t => t.belief1!==null || t.belief2!==null || t.errors.length || t.q1.trim() || t.q2.trim();
 const sorted = () => entries.slice().sort((a,b)=> b.time.localeCompare(a.time));   // nýjast efst
 
 function newRec(time){
-  return {id:newId(), time: time || toLocalInput(new Date()), situations:[], emotions:[], thoughts:[], unlockShown:false, lokid:false, legacy:null};
+  return {id:newId(), time: time || toLocalInput(new Date()), situations:[], emotions:[], thoughts:[], unlockShown:false, lokid:false, ci:false, legacy:null};
 }
+const newMood = () => Object.assign(newRec(), {ci:true});
+
+/* Hugsanir sem eru tengdar saman eru metnar sem ein hugsun. Leiðandi hugsun geymir matið. */
+function thoughtUnits(r){
+  const w = r.thoughts.filter(t=>t.text.trim()), ids = new Set(w.map(t=>t.id)), out = [];
+  w.forEach(t=>{
+    if(t.lead && t.lead!==t.id && ids.has(t.lead)) return;          // fylgihugsun
+    out.push({lead:t, members:[t].concat(w.filter(m=>m.id!==t.id && m.lead===t.id))});
+  });
+  return out;
+}
+const unitText = (u, sep=' + ') => u.members.map(m=>m.text.trim()).join(sep);
 /* Öll merki skráningar (sameinuð úr öllum aðstæðum) */
 function recTags(r){
   const o = {tema:[], folk:[], stadur:[]};
@@ -234,6 +249,7 @@ function viewHome(){
     <div class="week">${days}</div>
     <button class="plus" data-a="newRec" aria-label="Skrá hugsun">+</button>
     <div class="plusl">Skrá hugsun</div>
+    <button class="big" data-a="newMood">Skrá líðan</button>
     ${recentList()}`;
 }
 
@@ -251,7 +267,7 @@ function recentList(){
     const k = r.time.slice(0,10);
     const g = k>=today ? 0 : k===yday ? 1 : k>=wkKey ? 2 : k>=lwKey ? 3 : -1;
     if(g>=0) groups[g][1].push(r);
-    else if(recStatus(r)!=='g') pend.push(r);       // óklárað eldra sést alltaf
+    else if(['r','y'].includes(recStatus(r))) pend.push(r);       // óklárað eldra sést alltaf
     else old.push(r);
   });
   let h = '';
@@ -281,8 +297,9 @@ function entryCard(r){
   const titles = r.situations.map(s=>s.title).filter(Boolean).join(' · ');
   const emo = r.emotions.map(x=>`${esc(x.w)} ${x.s}${x.s2!==null?' → '+x.s2:''}`).join(', ');
   const th = (r.thoughts.find(t=>t.text.trim()) || {}).text || '';
+  const late = ['r','y'].includes(recStatus(r));
   return `<div class="card entry st-${recStatus(r)}" data-a="open" data-id="${esc(r.id)}">
-    <div class="when">${esc(fmtTime(r.time))} ${stBadge(r)}${recStatus(r)!=='g'?` <span class="${isLate(r)?'late':''}">· ${ageTxt(r)}</span>`:''}</div>
+    <div class="when">${esc(fmtTime(r.time))} ${stBadge(r)}${late?` <span class="${isLate(r)?'late':''}">· ${ageTxt(r)}</span>`:''}</div>
     ${titles?`<div><b>${esc(titles)}</b></div>`:''}
     ${emo?`<div class="small">${emo}</div>`:''}
     ${th?`<div class="snip muted">${esc(snip(th,110))}</div>`:''}
@@ -300,11 +317,12 @@ function viewDetail(){
   const sits = r.situations.map(s=>row('Aðstæður', `<strong>${esc(s.title)}</strong>${s.desc?' – '+esc(s.desc):''}`)).join('');
   const emo = r.emotions.length ? row('Tilfinning', r.emotions.map(x=>
     `<span class="ec" style="--c:${colorOf(x.w)}">${esc(x.w)} <i>${x.s}${x.s2!==null?' → '+x.s2:''}</i></span>`).join('')) : '';
-  const ths = r.thoughts.map(t=>{
-    const parts = [];
+  const ths = thoughtUnits(r).map(u=>{
+    const t = u.lead, parts = [];
     if(t.belief1!==null) parts.push(`Trú ${t.belief1}%${t.belief2!==null?' → '+t.belief2+'%':''}`);
     if(t.errors.length)  parts.push(esc(t.errors.join(', ')));
-    return row('Hugsun', esc(t.text)
+    return row('Hugsun', u.members.map(m=>esc(m.text.trim())).join('<br>')
+      + (t.emos.length ? `<div class="sub"><b>Tilfinning:</b>${esc(t.emos.join(', '))}</div>` : '')
       + (parts.length ? `<div class="sub">${parts.join(' · ')}</div>` : '')
       + (t.q1.trim() ? `<div class="sub"><b>Efi:</b>${esc(t.q1)}</div>` : '')
       + (t.q2.trim() ? `<div class="sub"><b>Annað ljós:</b>${esc(t.q2)}</div>` : ''));
@@ -313,13 +331,14 @@ function viewDetail(){
     r.legacy.alt ? row('Annað sjónarhorn', esc(r.legacy.alt)) : '',
     r.legacy.did ? row('Ég gerði', esc(r.legacy.did) + (r.legacy.helped ? ` <span class="badge">· Hjálpaði: ${esc(r.legacy.helped)}</span>` : '')) : ''
   ].join('') : '';
-  const miss = missingList(r), stt = recStatus(r);
+  const miss = r.ci ? [] : missingList(r), stt = recStatus(r);
   return `<h1 class="dh">${esc(fmtTime(r.time))} ${stBadge(r)}</h1>
     ${ctx?`<p class="dctx">${ctx}</p>`:''}
     <div class="dbox">${sits}${emo}${ths}${lg}</div>
     ${miss.length?`<p class="dctx" style="margin:12px 0 0">Vantar: <span>${esc(miss.join(', '))}</span></p>`:''}
     <div class="dact">
-      <button class="${stt!=='g'?'primary':''}" data-a="editRec" data-id="${esc(r.id)}">${stt!=='g'?'Halda áfram':'Breyta'}</button>
+      ${r.ci ? `<button class="primary" style="flex:1 1 100%" data-a="ciFull" data-id="${esc(r.id)}">Gera að fullri skráningu</button>` : ''}
+      <button class="${stt==='r'||stt==='y'?'primary':''}" data-a="editRec" data-id="${esc(r.id)}">${stt==='r'||stt==='y'?'Halda áfram':'Breyta'}</button>
       <button class="danger" data-a="delRec" data-id="${esc(r.id)}">Eyða</button>
     </div>`;
 }
@@ -479,7 +498,7 @@ function exportTxt(){
   if(!list.length) return toast('Engar skráningar á þessu tímabili');
   let t = `HUGSANASKRÁ\nTímabil: ${exFrom} – ${exTo}\nFjöldi skráninga: ${list.length}\n`;
   list.forEach(r=>{
-    t += `\n=== ${fmtTime(r.time)}${isDraft(r)?' (drög)':''} ===\n`;
+    t += `\n=== ${fmtTime(r.time)}${isDraft(r)?' (drög)':''}${r.ci?' (líðan)':''} ===\n`;
     r.situations.forEach(s=>{
       t += `Aðstæður: ${s.title}${s.desc?' – '+s.desc:''}\n`;
       const tg = [['Þema',s.tags.tema],['Fólk',s.tags.folk],['Staður',s.tags.stadur]].filter(x=>x[1].length)
@@ -487,8 +506,10 @@ function exportTxt(){
       if(tg) t += `  (${tg})\n`;
     });
     if(r.emotions.length) t += `Tilfinningar (1-10): ${r.emotions.map(x=>`${x.w} ${x.s}${x.s2!==null?' → '+x.s2:''}`).join(', ')}\n`;
-    r.thoughts.forEach((th,i)=>{
-      t += `Hugsun ${i+1}: ${th.text}\n`;
+    thoughtUnits(r).forEach((u,i)=>{
+      const th = u.lead;
+      t += `Hugsun ${i+1}: ${unitText(u,' / ')}\n`;
+      if(th.emos.length)    t += `  Tilfinning við hugsun: ${th.emos.join(', ')}\n`;
       if(th.belief1!==null) t += `  Trú á hugsunina: ${th.belief1}%${th.belief2!==null?' → '+th.belief2+'%':''}\n`;
       if(th.errors.length)  t += `  Hugsunarvillur: ${th.errors.join(', ')}\n`;
       if(th.q1.trim())      t += `  Að draga í efa: ${th.q1}\n`;

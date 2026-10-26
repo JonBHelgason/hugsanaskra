@@ -7,7 +7,8 @@
 /* ---------- 1. STAÐA ---------- */
 const COLS = ['Aðstæður','Tilfinning','Hugsun','Endurmat'];
 let rec = null;            // skráningin sem er í vinnslu (sama hlut og í entries)
-let fmode = 'overview';    // overview | pager
+let fmode = 'overview';    // overview | pager | mood (skrá líðan)
+let linkSel = [];          // valdar hugsanir til að tengja
 let colIdx = 0;            // opinn dálkur
 let sheets = [];           // staflinn af gluggum: {type:'sit'|'emo'|'thought'|'card'|'errors'|'rate', i}
 let tagEdit = false;       // merki: eyða eigin merkjum
@@ -27,7 +28,7 @@ function touch(){
 
 /* ---------- 2. SKRÁNING ---------- */
 function startForm(r, detail){
-  rec = r; fmode = 'overview'; colIdx = 0; sheets = []; fromDetail = !!detail;
+  rec = r; fmode = r.ci ? 'mood' : 'overview'; colIdx = 0; sheets = []; fromDetail = !!detail;
   tagEdit = false; searchQ = ''; wBase = wMid = openQuad = null;
   go('form');
 }
@@ -44,7 +45,14 @@ function leaveForm(dest){
 function renderForm(){
   $('app').hidden = true; $('nav').hidden = false; $('form').hidden = false;
   document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('on'));
-  if(fmode==='overview'){
+  if(fmode==='mood'){
+    $('form').innerHTML = `<div class="fbar"><button data-a="formBack" aria-label="Til baka">‹</button><b>Skrá líðan</b></div>
+      <div class="sbody"><div id="moodemo">${emoBody()}</div>
+        <label for="rtime">Dagsetning og tími</label>
+        <input type="datetime-local" id="rtime" data-k="time" value="${esc(rec.time)}"></div>
+      <div class="sfoot"><button class="big primary" data-a="moodSave">Vista</button></div>`;
+    if(wmode==='wheel') drawStage();
+  } else if(fmode==='overview'){
     $('form').innerHTML = overviewHTML();
   } else {
     $('form').innerHTML = `
@@ -67,7 +75,7 @@ function colSummary(i){
   if(i===2){ const t = rec.thoughts.filter(t=>t.text.trim()); return t.length ? snip(t[0].text,50)+(t.length>1?` (+${t.length-1})`:'') : 'Ekkert skráð enn'; }
   if(!hasMin(rec)) return 'Læst – vantar lágmark';
   if(rec.lokid) return 'Lokið';
-  const n = rec.thoughts.filter(t=>t.text.trim()&&thoughtWorked(t)).length;
+  const n = thoughtUnits(rec).filter(u=>thoughtWorked(u.lead)).length;
   return n ? `${n} hugsun${n===1?'':'ir'} unnin${n===1?'':'ar'}` : 'Veldu hugsun til að vinna með';
 }
 function overviewHTML(){
@@ -131,11 +139,18 @@ function openCol(i){
 }
 
 const tagLine = s => ['tema','folk','stadur'].flatMap(g=>s.tags[g]).join(', ');
-const emptyThought = () => ({id:newId(), text:'', belief1:null, errors:[], q1:'', q2:'', belief2:null});
+const emptyThought = () => ({id:newId(), text:'', belief1:null, errors:[], q1:'', q2:'', belief2:null, lead:'', emos:[]});
 /* Fjarlægja tómar hugsanir. Skilar true ef eitthvað var fjarlægt. */
 function cleanThoughts(){
-  const n = rec.thoughts.length;
-  rec.thoughts = rec.thoughts.filter(t=>t.text.trim());
+  const n = rec.thoughts.length, keep = rec.thoughts.filter(t=>t.text.trim());
+  /* Ef leiðandi hugsun í tengdum hóp er tæmd tekur næsta hugsun við matinu */
+  rec.thoughts.filter(t=>!t.text.trim()).forEach(old=>{
+    const mem = keep.filter(m=>m.lead===old.id); if(!mem.length) return;
+    const nl = mem[0];
+    ['belief1','belief2','errors','emos','q1','q2'].forEach(k=>{ nl[k] = old[k]; });
+    nl.lead = ''; mem.slice(1).forEach(m=>{ m.lead = nl.id; });
+  });
+  rec.thoughts = keep;
   if(rec.thoughts.length!==n){ touch(); return true; }
   return false;
 }
@@ -165,12 +180,14 @@ function colRe(){
   const open = rateOpen(rec);
   const rate = rec.emotions.length ? `<div class="card tap ratecard${open?'':' locked'}" data-a="openRate"><b>Meta líðan aftur</b><div class="small">${
     open ? rec.emotions.map(x=>`${esc(x.w)}: ${x.s}${x.s2!==null?' → '+x.s2:''}`).join(' · ') : 'Opnast þegar þú hefur metið trú á a.m.k. einni hugsun eftir endurmat.'}</div></div>` : '';
-  const cards = rec.thoughts.map((t,i)=>{
-    if(!t.text.trim()) return '';
-    const sub = [t.belief1!==null?`Trú ${t.belief1}%${t.belief2!==null?' → '+t.belief2+'%':''}`:'', t.errors.length?`${t.errors.length} hugsunarvillur`:''].filter(Boolean).join(' · ');
-    return `<div class="card tap" data-a="editCard" data-i="${i}"><b>${esc(snip(t.text,120))}</b>${sub?`<div class="small">${sub}</div>`:''}</div>`;
+  const units = thoughtUnits(rec);
+  const cards = units.map(u=>{
+    const t = u.lead;
+    const sub = [t.emos.length?esc(t.emos.join(', ')):'', t.belief1!==null?`Trú ${t.belief1}%${t.belief2!==null?' → '+t.belief2+'%':''}`:'', t.errors.length?`${t.errors.length} hugsunarvillur`:''].filter(Boolean).join(' · ');
+    return `<div class="card tap" data-a="editCard" data-i="${rec.thoughts.indexOf(t)}"><b>${esc(snip(unitText(u),120))}</b>${u.members.length>1?` <span class="small">(${u.members.length} tengdar)</span>`:''}${sub?`<div class="small">${sub}</div>`:''}</div>`;
   }).join('');
-  return `<p class="expl">${TXT.col4}</p>${cards}${rate}
+  const link = units.length>=2 ? `<button class="big" data-a="openLink">Tengja hugsanir</button>` : '';
+  return `<p class="expl">${TXT.col4}</p>${cards}${link}${rate}
     <button class="big primary" data-a="finish" style="margin-top:18px">${rec.lokid?'Skráning lokið · Fara heim':'Ljúka skráningu'}</button>`;
 }
 
@@ -201,24 +218,35 @@ function renderSheet(keepScroll){
   if(!sheets.length || !rec){ el.hidden = true; el.innerHTML = ''; return; }
   const old = el.querySelector('.sbody'), st = (keepScroll && old) ? old.scrollTop : 0;
   const o = sheets[sheets.length-1];
-  el.innerHTML = {card:sheetCard, errors:sheetErrors, rate:sheetRate}[o.type](o);
+  el.innerHTML = {card:sheetCard, errors:sheetErrors, rate:sheetRate, link:sheetLink}[o.type](o);
   el.hidden = false;
   const nb = el.querySelector('.sbody'); if(nb) nb.scrollTop = st;
 }
 
 const beliefRow = (k,i,v) => `<div class="beliefrow"><input type="range" min="0" max="100" step="5" value="${v===null?50:v}" data-k="${k}" data-i="${i}"><span class="val" id="${k}v">${v===null?'–':v+'%'}</span></div>`;
 function sheetCard(o){
-  const t = rec.thoughts[o.i];
+  const t = rec.thoughts[o.i], u = thoughtUnits(rec).find(x=>x.lead===t) || {lead:t, members:[t]};
+  const pl = u.members.length>1;
   return `${fbar('Endurmat')}<div class="sbody">
-    <div class="card"><b>${esc(t.text)}</b></div>
-    <label>Hversu mikið trúir þú þessari hugsun? <small>(0–100%)</small></label>${beliefRow('b1',o.i,t.belief1)}
+    <div class="card">${u.members.map(m=>`<div><b>${esc(m.text)}</b></div>`).join('')}</div>
+    ${pl ? `<p class="small" style="margin:0 0 6px">Tengdar hugsanir eru metnar sem ein hugsun.</p><button class="linkbtn" data-a="unlink" style="margin:0 0 4px">Aðskilja hugsanir</button>` : ''}
+    ${rec.emotions.length ? `<label>Tilfinning sem fylgdi ${pl?'hugsununum':'hugsuninni'} <small>(valkvætt)</small></label>
+      <div class="chips">${rec.emotions.map(x=>`<button class="chip${t.emos.includes(x.w)?' on':''}" style="--c:${colorOf(x.w)}" data-a="toggleEmoLink" data-w="${esc(x.w)}">${esc(x.w)}</button>`).join('')}</div>` : ''}
+    <label>Hversu mikið trúir þú ${pl?'þessum hugsunum':'þessari hugsun'}? <small>(0–100%)</small></label>${beliefRow('b1',o.i,t.belief1)}
     <label>Hugsunarvillur</label>
     ${t.errors.length?`<div class="chips" style="margin-bottom:8px">${t.errors.map(e=>`<span class="chip tg on" style="--c:var(--accent)">${esc(e)}</span>`).join('')}</div>`:''}
     <button class="big" data-a="openErr">${t.errors.length?'Breyta hugsunarvillum':'Velja hugsunarvillur'}</button>
     <label for="q1">${TXT.q1}</label><textarea id="q1" data-k="q1" data-i="${o.i}">${esc(t.q1)}</textarea>
     <label for="q2">${TXT.q2}</label><textarea id="q2" data-k="q2" data-i="${o.i}">${esc(t.q2)}</textarea>
-    <label>Hversu mikið trúir þú hugsuninni núna? <small>(0–100%)</small></label>${beliefRow('b2',o.i,t.belief2)}
+    <label>Hversu mikið trúir þú ${pl?'hugsununum':'hugsuninni'} núna? <small>(0–100%)</small></label>${beliefRow('b2',o.i,t.belief2)}
   </div>${foot()}`;
+}
+function sheetLink(){
+  return `${fbar('Tengja hugsanir')}<div class="sbody">
+    <p class="expl">Veldu hugsanir sem eiga saman. Þær eru metnar sem ein hugsun.</p>
+    ${thoughtUnits(rec).map(u=>`<button class="erow${linkSel.includes(u.lead.id)?' on':''}" data-a="toggleLink" data-id="${esc(u.lead.id)}">
+      <span class="ck"></span><span class="t">${esc(unitText(u))}</span></button>`).join('')}
+  </div><div class="sfoot"><button class="big primary" data-a="doLink">Tengja</button></div>`;
 }
 function sheetErrors(){
   const t = rec.thoughts[sheets[sheets.length-2].i];
@@ -272,7 +300,11 @@ function togglePick(w){
   if(i>=0) rec.emotions.splice(i,1); else rec.emotions.push({w, s:5, s2:null});
   touch(); refreshEmo();
 }
-function refreshEmo(){ renderCol(1); if(wmode==='wheel') drawStage(); }
+function refreshEmo(){
+  if(fmode==='mood'){ const m = $('moodemo'); const st = m.parentNode.scrollTop; m.innerHTML = emoBody(); m.parentNode.scrollTop = st; }
+  else renderCol(1);
+  if(wmode==='wheel') drawStage();
+}
 const wordChip = w => `<button class="chip${picked(w)?' on':''}" style="--c:${colorOf(w)}" data-a="pick" data-w="${esc(w)}">${esc(w)}</button>`;
 function searchHTML(){
   const q = norm(searchQ.trim());
@@ -406,6 +438,38 @@ const actions = {
     touch(); renderSheet(true);
   },
   finish: () => { rec.lokid = true; touch(); toast('Skráningu lokið'); leaveForm('home'); },
+  openLink: () => { linkSel = []; openSheet({type:'link'}); },
+  toggleLink: el => { const id = el.dataset.id, k = linkSel.indexOf(id); if(k>=0) linkSel.splice(k,1); else linkSel.push(id); renderSheet(true); },
+  doLink: () => {
+    const chosen = thoughtUnits(rec).filter(u=>linkSel.includes(u.lead.id));
+    if(chosen.length<2) return toast('Veldu a.m.k. tvær hugsanir');
+    const main = chosen[0].lead;
+    chosen.slice(1).forEach(u=>{
+      const o = u.lead;                                   // matið sameinast í leiðandi hugsun
+      if(main.belief1===null) main.belief1 = o.belief1;
+      if(main.belief2===null) main.belief2 = o.belief2;
+      o.errors.forEach(e=>{ if(!main.errors.includes(e)) main.errors.push(e); });
+      o.emos.forEach(e=>{ if(!main.emos.includes(e)) main.emos.push(e); });
+      if(!main.q1.trim()) main.q1 = o.q1;
+      if(!main.q2.trim()) main.q2 = o.q2;
+      Object.assign(o, {belief1:null, belief2:null, errors:[], emos:[], q1:'', q2:''});
+      u.members.forEach(m=>{ m.lead = main.id; });
+    });
+    linkSel = []; sheets.pop(); touch(); renderSheet(false); renderAllCols(); toast('Hugsanir tengdar');
+  },
+  unlink: () => {
+    const lead = rec.thoughts[sheets[sheets.length-1].i];
+    rec.thoughts.forEach(m=>{ if(m.lead===lead.id) m.lead = ''; });
+    touch(); renderSheet(false); renderAllCols();
+  },
+  toggleEmoLink: el => {
+    const t = rec.thoughts[sheets[sheets.length-1].i], w = el.dataset.w, k = t.emos.indexOf(w);
+    if(k>=0) t.emos.splice(k,1); else t.emos.push(w);
+    touch(); renderSheet(true);
+  },
+  newMood: () => startForm(newMood()),
+  moodSave: () => { if(!rec.emotions.length) return toast('Veldu tilfinningu'); touch(); toast('Líðan skráð'); leaveForm('home'); },
+  ciFull: el => { const r = entries.find(x=>x.id===el.dataset.id); r.ci = false; saveEntries(); startForm(r, true); },
   openRate: () => { if(!rateOpen(rec)) return toast('Metið fyrst trú á hugsun eftir endurmat'); rateTouched = false; openSheet({type:'rate'}); },
 
   /* merki */
@@ -488,7 +552,7 @@ $('importFile').addEventListener('change', e=>{
 });
 window.addEventListener('resize', ()=>{
   const o = sheets[sheets.length-1];
-  if(fmode==='pager' && $('stage')) drawStage();
+  if($('stage')) drawStage();
   if(fmode==='pager' && view==='form' && $('pager')) $('pager').scrollLeft = colIdx*$('pager').clientWidth;
 });
 

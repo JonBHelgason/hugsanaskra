@@ -19,6 +19,11 @@ Skráning vistast sjálfkrafa. Á forsíðu er hún merkt með lit:
 
 Yfirsýn (mynstur) birtist þegar skráningar eru 5 eða fleiri.
 
+## Tengdar hugsanir og líðan
+- **Tengja hugsanir:** í Endurmat. Tengdar hugsanir eru metnar sem ein hugsun (ein trú, ein hugsunarvilla, eitt svar).
+- **Tilfinning við hugsun:** í endurmatsspjaldi velurðu hvaða tilfinning fylgdi hugsuninni.
+- **Skrá líðan:** hnappur á forsíðu. Skráir bara tilfinningu og styrk. Má gera að fullri skráningu seinna.
+
 ## Skrár
 | Skrá | Hlutverk |
 |---|---|
@@ -36,7 +41,7 @@ Yfirsýn (mynstur) birtist þegar skráningar eru 5 eða fleiri.
 3. Opnaðu slóðina í Safari (iPhone) eða Chrome (Android) > Add to Home Screen.
 
 ## Uppfæra
-Þegar þú breytir einhverri skrá, hækkaðu `VERSION` í `sw.js` (t.d. `hugsanaskra-v11`).
+Þegar þú breytir einhverri skrá, hækkaðu `VERSION` í `sw.js` (t.d. `hugsanaskra-v12`).
 Annars sækir síminn gömlu útgáfuna úr skyndiminni.
 
 ## Gögn og afrit

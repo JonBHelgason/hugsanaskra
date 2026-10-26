@@ -170,7 +170,7 @@ button.hub{background:var(--c);color:#111;font-weight:700}
   padding:1px 10px;margin:2px 4px 2px 0;font-size:15px;white-space:normal}
 .ec i{font-style:normal;font-weight:700}
 .badge{color:var(--accent);font-weight:600}
-.dact{display:flex;gap:10px;margin-top:14px}
+.dact{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
 .dact button{flex:1;min-height:46px}
 
 /* ---- vikuræma á forsíðu ---- */
@@ -228,3 +228,5 @@ textarea.thin{min-height:68px;margin:0 0 10px}
 .late{color:var(--red);font-weight:600}
 .card.remind{border-color:var(--yellow);border-left:6px solid var(--yellow)}
 .seg button{padding:10px 4px;font-size:16px}
+
+.entry.st-b{border-left-color:var(--accent)} .st.st-b{background:var(--accent)}
