@@ -217,14 +217,52 @@ function viewHome(){
     return `<div class="d">${w}<button class="dayc${col?' has':''}${key===today?' today':''}${key>today?' future':''}"
       style="--c:${col||'transparent'}" data-a="day" data-d="${key}">${col?'':'+'}</button></div>`;
   }).join('');
-  const list = sorted();
   return `<h1>Hvernig líður þér ${when}?</h1>
     ${backupBanner()}
+    ${reminderBanner()}
     <div class="week">${days}</div>
     <button class="plus" data-a="newRec" aria-label="Skrá hugsun">+</button>
     <div class="plusl">Skrá hugsun</div>
-    <h2>Fyrri skráningar</h2>
-    ${list.length ? list.map(entryCard).join('') : '<p class="muted">Engar skráningar enn. Ýttu á plúsinn.</p>'}`;
+    ${recentList()}`;
+}
+
+/* Fyrri skráningar flokkaðar: óklárað eldra efst, svo í dag, í gær, í vikunni, síðustu viku. Eldra er falið. */
+let showOld = false;
+function recentList(){
+  const list = sorted();
+  if(!list.length) return '<h2>Fyrri skráningar</h2><p class="muted">Engar skráningar enn. Ýttu á plúsinn.</p>';
+  const now = new Date(), today = dateOnly(now);
+  const yd = new Date(now); yd.setDate(yd.getDate()-1); const yday = dateOnly(yd);
+  const wk = mondayOf(now), wkKey = dateOnly(wk);
+  const lw = new Date(wk); lw.setDate(lw.getDate()-7); const lwKey = dateOnly(lw);
+  const groups = [['Í dag',[]],['Í gær',[]],['Í vikunni',[]],['Síðustu viku',[]]], old = [], pend = [];
+  list.forEach(r=>{
+    const k = r.time.slice(0,10);
+    const g = k>=today ? 0 : k===yday ? 1 : k>=wkKey ? 2 : k>=lwKey ? 3 : -1;
+    if(g>=0) groups[g][1].push(r);
+    else if(recStatus(r)!=='g') pend.push(r);       // óklárað eldra sést alltaf
+    else old.push(r);
+  });
+  let h = '';
+  if(pend.length) h += `<h2>Óklárað frá fyrr</h2>` + pend.map(entryCard).join('');
+  groups.forEach(([t,l])=>{ if(l.length) h += `<h2>${t}</h2>` + l.map(entryCard).join(''); });
+  if(old.length) h += showOld
+    ? `<h2>Eldra</h2>` + old.map(entryCard).join('') + `<button class="linkbtn" data-a="toggleOld">Fela eldra</button>`
+    : `<button class="big" data-a="toggleOld">Sýna eldra (${old.length})</button>`;
+  return h || '<p class="muted">Engar nýlegar skráningar.</p>';
+}
+
+/* ----- Áminning um endurmat (aðeins í appinu, engar tilkynningar) ----- */
+const reHours = () => meta.reHours===undefined ? 24 : meta.reHours;     // 0 = aldrei
+const ageHours = r => (Date.now() - new Date(r.time)) / 3600000;
+const ageTxt = r => { const h = ageHours(r); return h<1 ? 'núna' : h<48 ? `fyrir ${Math.floor(h)} klst` : `fyrir ${Math.floor(h/24)} d`; };
+const isLate = r => recStatus(r)==='y' && reHours()>0 && ageHours(r) > reHours();
+function reminderBanner(){
+  const late = entries.filter(isLate).sort((a,b)=>a.time.localeCompare(b.time));
+  if(!late.length) return '';
+  return `<div class="card remind"><b>${late.length===1?'1 skráning bíður':late.length+' skráningar bíða'} endurmats</b><br>
+    <span class="muted">Eldri en ${reHours()} klst. Gott er að endurmeta sem fyrst.</span>
+    <button class="big" data-a="open" data-id="${esc(late[0].id)}">Opna elstu</button></div>`;
 }
 
 /* Spjald í lista (heim og dagatal). Drög eru merkt. */
@@ -233,7 +271,7 @@ function entryCard(r){
   const emo = r.emotions.map(x=>`${esc(x.w)} ${x.s}${x.s2!==null?' → '+x.s2:''}`).join(', ');
   const th = (r.thoughts.find(t=>t.text.trim()) || {}).text || '';
   return `<div class="card entry st-${recStatus(r)}" data-a="open" data-id="${esc(r.id)}">
-    <div class="when">${esc(fmtTime(r.time))} ${stBadge(r)}</div>
+    <div class="when">${esc(fmtTime(r.time))} ${stBadge(r)}${recStatus(r)!=='g'?` <span class="${isLate(r)?'late':''}">· ${ageTxt(r)}</span>`:''}</div>
     ${titles?`<div><b>${esc(titles)}</b></div>`:''}
     ${emo?`<div class="small">${emo}</div>`:''}
     ${th?`<div class="snip muted">${esc(snip(th,110))}</div>`:''}
@@ -386,6 +424,15 @@ function viewData(){
       <p class="muted" style="font-size:14px;margin:0">Á símanum opnast deilingarvalmynd.</p>
     </div>
 
+    <h2>Áminning um endurmat</h2>
+    <div class="card">
+      <label for="rehours" style="margin-top:0">Minna á endurmat eftir</label>
+      <select id="rehours" data-change="reHours">
+        ${[[12,'12 klst'],[24,'24 klst'],[48,'48 klst'],[0,'Aldrei']].map(([v,t])=>`<option value="${v}"${reHours()===v?' selected':''}>${t}</option>`).join('')}
+      </select>
+      <p class="muted" style="font-size:14px;margin:8px 0 0">Tímamörkin eru stillanleg. Spurðu sálfræðinginn hvað hentar.</p>
+    </div>
+
     <h2>Afrit og innflutningur</h2>
     <div class="card">
       <p style="margin-top:0">${entries.length} skráningar í símanum.<br>
@@ -444,7 +491,7 @@ function exportTxt(){
   shareOrDownload(`hugsanaskra_${exFrom}_${exTo}.txt`, 'text/plain', t);
 }
 function backup(){
-  const data = {app:'hugsanaskra', version:2, exported:new Date().toISOString(), records:entries, customTags:meta.customTags||{}};
+  const data = {app:'hugsanaskra', version:2, exported:new Date().toISOString(), records:entries, customTags:meta.customTags||{}, hiddenTags:meta.hiddenTags||{}};
   meta.lastBackup = new Date().toISOString(); saveMeta();
   shareOrDownload(`hugsanaskra_afrit_${dateOnly(new Date())}.json`, 'application/json', JSON.stringify(data,null,2));
   setTimeout(render, 300);
@@ -469,6 +516,11 @@ function importData(file){
           const g = g0==='gera' ? 'tema' : g0;
           meta.customTags[g] = Array.from(new Set((meta.customTags[g]||[]).concat(arr(d.customTags[g0]))));
         });
+        saveMeta();
+      }
+      if(d.hiddenTags){                                     // falin merki
+        meta.hiddenTags = meta.hiddenTags || {};
+        Object.keys(d.hiddenTags).forEach(g=>{ meta.hiddenTags[g] = Array.from(new Set((meta.hiddenTags[g]||[]).concat(arr(d.hiddenTags[g])))); });
         saveMeta();
       }
       toast('Innlestri lokið'); render();

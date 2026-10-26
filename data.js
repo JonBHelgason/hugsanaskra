@@ -118,7 +118,7 @@ const TXT = {
   col2:'Hvaða tilfinning kviknaði? Mundu að tilfinningum lýsir þú yfirleitt með einu orði. Einnig: Þú getur hafa fundið fyrir fleiri en einni tilfinningu, t.d. fyrst reiði og svo samviskubiti eða fyrst kvíða og síðan depurð eða vanmætti. Mundu að meta styrk tilfinningarinnar á skalanum 1-10.',
   col3:'Hvað kom upp í huga þér? Hvað hugsaðir þú? Sástu kannski myndir fyrir þér eða voru það hugsanir sem hægt er að lýsa með því hvað þú sagðir með sjálfri/sjálfum þér?',
   col4:'Veldu eina hugsun í einu. Þú getur unnið þær í hvaða röð sem er.',
-  q1:'Hvernig gætir þú dregið þessa hugsun í efa?',
+  q1:'Er hægt að draga þessa hugsun í efa? Hvernig?',
   q2:'Hvernig væri hægt að sjá þetta út frá öðru ljósi?'
 };
 

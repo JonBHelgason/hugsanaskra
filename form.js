@@ -31,17 +31,19 @@ function startForm(r, detail){
   tagEdit = false; searchQ = ''; wBase = wMid = openQuad = null;
   go('form');
 }
-function leaveForm(){
+function leaveForm(dest){
   if(rec) cleanThoughts();
   if(rec && !hasContent(rec)){ const i = entries.indexOf(rec); if(i>=0) entries.splice(i,1); saveEntries(); }
   else if(rec && isDraft(rec)) toast('Vistað sem drög');
   sheets = [];
   const keep = rec && entries.includes(rec);
   const id = rec && rec.id; rec = null;
-  if(fromDetail && keep) go('detail', id); else go('home');
+  if(typeof dest==='string') go(dest);
+  else if(fromDetail && keep) go('detail', id); else go('home');
 }
 function renderForm(){
-  $('app').hidden = true; $('nav').hidden = true; $('form').hidden = false;
+  $('app').hidden = true; $('nav').hidden = false; $('form').hidden = false;
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('on'));
   if(fmode==='overview'){
     $('form').innerHTML = overviewHTML();
   } else {
@@ -54,6 +56,11 @@ function renderForm(){
   renderSheet();
 }
 
+/* Er dálkur fylltur? (1–3 lágmark, 4 = endurmat klárað) */
+const colDone = i => i===0 ? rec.situations.some(s=>s.title.trim() && s.desc.trim())
+  : i===1 ? rec.emotions.length>0
+  : i===2 ? rec.thoughts.some(t=>t.text.trim())
+  : reDone(rec);
 function colSummary(i){
   if(i===0){ const t = rec.situations.map(s=>s.title).filter(Boolean).join(' · '); return t || 'Ekkert skráð enn'; }
   if(i===1) return rec.emotions.length ? rec.emotions.map(x=>`${x.w} ${x.s}`).join(', ') : 'Ekkert skráð enn';
@@ -68,7 +75,7 @@ function overviewHTML(){
     <div class="sbody">
       ${isDraft(rec) ? '<p class="muted" style="margin:4px 0 6px">Drög. Vistast sjálfkrafa. Endurmat opnast þegar lágmarki er náð.</p>' : ''}
       ${COLS.map((c,i)=>`<button class="card ocard${i===3&&lock?' locked':''}" data-a="openCol" data-i="${i}">
-        <span class="num">${i===3&&lock?'🔒':i+1}</span>
+        <span class="num${colDone(i)?' done':''}">${i===3&&lock?'🔒':colDone(i)?'✓':i+1}</span>
         <span class="otxt"><b>${c}</b><span class="small">${esc(colSummary(i))}</span></span></button>`).join('')}
       <label for="rtime">Dagsetning og tími</label>
       <input type="datetime-local" id="rtime" data-k="time" value="${esc(rec.time)}">
@@ -89,7 +96,7 @@ function renderCol(i){ const p = $('pager'); if(p && p.children[i]) p.children[i
 function renderAllCols(){ if(fmode==='pager' && $('pager')){ for(let i=0;i<4;i++) renderCol(i); setDots(); if(wmode==='wheel') drawStage(); } }
 function setDots(){
   const d = $('dots'); if(!d) return;
-  d.innerHTML = COLS.map((c,i)=>`<button data-a="dot" data-i="${i}" aria-label="${c}" class="${i===colIdx?'on':''}${i===3&&!hasMin(rec)?' lk':''}"></button>`).join('');
+  d.innerHTML = COLS.map((c,i)=>`<button data-a="dot" data-i="${i}" aria-label="${c}" class="${i===colIdx?'on':''}${colDone(i)?' ok':''}${i===3&&!hasMin(rec)?' lk':''}"></button>`).join('');
   const t = $('ptitle'); if(t) t.textContent = COLS[colIdx];
 }
 function scrollToCol(i, smooth){
@@ -229,20 +236,25 @@ function sheetRate(){
 }
 
 /* ---------- 4. MERKI ---------- */
-const allTags = g => {
+const hiddenOf = g => (meta.hiddenTags||{})[g] || [];
+/* Merki í vali: sjálfgefin (nema falin) og eigin. Merki sem eru þegar á aðstæðunni sjást alltaf. */
+const allTags = (g, s) => {
   const base = TAG_GROUPS.find(x=>x.id===g).items;
-  return base.concat(((meta.customTags||{})[g]||[]).filter(t=>!base.includes(t)));
+  const list = base.concat(((meta.customTags||{})[g]||[]).filter(t=>!base.includes(t))).filter(t=>!hiddenOf(g).includes(t));
+  (s ? s.tags[g] : []).forEach(t=>{ if(!list.includes(t)) list.push(t); });
+  return list;
 };
 function tagBoxHTML(s,si){
   return TAG_GROUPS.map(g=>`<label>${g.title}</label><div class="chips">
-    ${allTags(g.id).map(t=>{
-      const custom = !g.items.includes(t), on = s.tags[g.id].includes(t);
-      return tagEdit && custom
+    ${allTags(g.id, s).map(t=>{
+      const on = s.tags[g.id].includes(t);
+      return tagEdit
         ? `<button class="chip" style="--c:var(--danger)" data-a="tagDel" data-s="${si}" data-g="${g.id}" data-t="${esc(t)}">${esc(t)} ✕</button>`
         : `<button class="chip tg${on?' on':''}" style="--c:var(--accent)" data-a="tag" data-s="${si}" data-g="${g.id}" data-t="${esc(t)}">${esc(t)}</button>`;
     }).join('')}
     <button class="chip" style="--c:var(--muted)" data-a="tagAdd" data-s="${si}" data-g="${g.id}" aria-label="Nýtt merki">+</button></div>`).join('')
-    + `<button class="linkbtn" data-a="tagEdit">${tagEdit?'Búið':'Eyða eigin merkjum'}</button>`;
+    + `<button class="linkbtn" data-a="tagEdit">${tagEdit?'Búið':'Eyða merkjum'}</button>`
+    + (tagEdit && Object.values(meta.hiddenTags||{}).some(a=>a.length) ? `<button class="linkbtn" data-a="tagRestore">Endurheimta eydd sjálfgefin merki</button>` : '');
 }
 
 /* ---------- 5. TILFINNINGAR ---------- */
@@ -273,11 +285,18 @@ function emoBody(){
   return `${sel ? `<h2 style="margin-top:6px">Valið (styrkur 1–10)</h2>${sel}` : '<p class="muted">Veldu eina eða fleiri tilfinningar og metið styrk hverrar.</p>'}
     <div class="seg wmode" style="margin-top:14px">
       <button class="${wmode==='wheel'?'on':''}" data-a="wmode" data-m="wheel">Hringur</button>
-      <button class="${wmode==='quad'?'on':''}" data-a="wmode" data-m="quad">Skap-mælir</button></div>
+      <button class="${wmode==='quad'?'on':''}" data-a="wmode" data-m="quad">Skap-mælir</button>
+      <button class="${wmode==='all'?'on':''}" data-a="wmode" data-m="all">Allt</button></div>
     <input type="text" class="search" id="searchbox" data-k="search" placeholder="Leita að orði" value="${esc(searchQ)}">
     <div class="words" id="sres">${searchHTML()}</div>
-    ${wmode==='wheel' ? '<div id="stage"></div>' : quadsHTML()}
+    ${wmode==='wheel' ? '<div id="stage"></div>' : wmode==='quad' ? quadsHTML() : allHTML()}
     <div class="free"><input type="text" id="fw" placeholder="Eigið orð"><button data-a="addFree">Bæta við</button></div>`;
+}
+/* „Allt“: allt tréð opið, flokkað eftir grunntilfinningu og undirflokki */
+function allHTML(){
+  return WHEEL.map(b=>`<h2 style="color:var(--text)"><span class="dotc" style="background:${b.color}"></span>${esc(b.name)}</h2>
+    <div class="words">${wordChip(b.name)}</div>
+    ${b.mids.map(m=>`<div class="words" style="margin-top:8px">${wordChip(m.name)}${m.words.filter(w=>w!==m.name).map(wordChip).join('')}</div>`).join('')}`).join('');
 }
 function quadsHTML(){
   const q = QUADS.find(x=>x.id===openQuad);
@@ -340,7 +359,8 @@ const nowFor = key => key===dateOnly(new Date()) ? toLocalInput(new Date()) : ke
 
 const actions = {
   /* leiðsögn og forsíða */
-  nav: el => go(el.dataset.v),
+  nav: el => { if(view==='form' && rec) leaveForm(el.dataset.v); else go(el.dataset.v); },
+  toggleOld: () => { showOld = !showOld; render(); },
   open: el => go('detail', el.dataset.id),
   newRec: () => startForm(newRec()),
   editRec: el => startForm(entries.find(x=>x.id===el.dataset.id), true),
@@ -360,7 +380,7 @@ const actions = {
   closeModal,
 
   /* skráning */
-  formBack: leaveForm,
+  formBack: () => leaveForm(),
   toOverview: () => { cleanThoughts(); fmode = 'overview'; sheets = []; renderForm(); },
   openCol: el => openCol(+el.dataset.i),
   goRe: () => { closeModal(); fmode = 'pager'; colIdx = 3; renderForm(); },
@@ -395,17 +415,22 @@ const actions = {
     const t = (prompt('Nýtt merki:')||'').trim(); if(!t) return;
     const g = el.dataset.g; meta.customTags = meta.customTags || {};
     meta.customTags[g] = meta.customTags[g] || [];
+    meta.hiddenTags = meta.hiddenTags || {}; meta.hiddenTags[g] = hiddenOf(g).filter(x=>x!==t);
     if(!allTags(g).includes(t)) meta.customTags[g].push(t);
     const a = rec.situations[+el.dataset.s].tags[g]; if(!a.includes(t)) a.push(t);
     saveMeta(); touch(); renderCol(0);
   },
   tagDel: el => {
     const g = el.dataset.g, t = el.dataset.t;
-    if(!confirm(`Eyða merkinu „${t}“?`)) return;
-    meta.customTags[g] = (meta.customTags[g]||[]).filter(x=>x!==t); saveMeta();
-    rec.situations.forEach(s=>{ s.tags[g] = s.tags[g].filter(x=>x!==t); });
-    touch(); renderCol(0);
+    if(!confirm(`Eyða merkinu „${t}“ úr valinu? Gamlar skráningar halda því.`)) return;
+    /* Merkið hverfur úr valinu. Gamlar skráningar halda því. Merki á þessari aðstæðu er einnig tekið af. */
+    meta.customTags = meta.customTags || {}; meta.hiddenTags = meta.hiddenTags || {};
+    meta.customTags[g] = (meta.customTags[g]||[]).filter(x=>x!==t);
+    if(!hiddenOf(g).includes(t)) meta.hiddenTags[g] = hiddenOf(g).concat(t);
+    const sit = rec.situations[+el.dataset.s]; sit.tags[g] = sit.tags[g].filter(x=>x!==t);
+    saveMeta(); touch(); renderCol(0);
   },
+  tagRestore: () => { meta.hiddenTags = {}; saveMeta(); renderCol(0); },
   tagEdit: () => { tagEdit = !tagEdit; renderCol(0); },
 
   /* tilfinningar */
@@ -453,6 +478,7 @@ document.addEventListener('change', e=>{
   const el = e.target;
   if(el.dataset.k==='time' && rec && el.value){ rec.time = el.value; touch(); }
   if(el.dataset.change==='statsDays'){ statsDays = +el.value; render(); }
+  if(el.dataset.change==='reHours'){ meta.reHours = +el.value; saveMeta(); render(); }
 });
 $('importFile').addEventListener('change', e=>{
   const f = e.target.files[0]; if(f) importData(f); e.target.value = '';
