@@ -230,3 +230,12 @@ textarea.thin{min-height:68px;margin:0 0 10px}
 .seg button{padding:10px 4px;font-size:16px}
 
 .entry.st-b{border-left-color:var(--accent)} .st.st-b{background:var(--accent)}
+
+/* ---- dagbók ---- */
+.dayc.dj{position:relative}
+.dayc.dj::after{content:'';position:absolute;right:6px;bottom:6px;width:7px;height:7px;border-radius:50%;background:var(--accent)}
+.daybig{width:56px;height:56px;border-radius:50%;border:1px solid var(--line);margin:4px 0 6px}
+.xbtn{flex:0 0 auto;min-height:40px;min-width:40px;padding:0;margin-left:8px}
+.card.calm{border-left:6px solid var(--accent);margin-top:12px}
+.card.calm p{margin:6px 0}
+.telbtn{display:block;text-align:center;padding:12px 8px;border-radius:14px;background:var(--accent);color:var(--onacc);text-decoration:none;font-weight:600}
