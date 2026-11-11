@@ -26,12 +26,12 @@ Yfirsýn (mynstur) birtist þegar skráningar eru 5 eða fleiri.
 
 ## Dagbók dagsins
 Ein stutt dagleg skráning, óháð hugsanaskrám. Allt valfrjálst og vistast sjálfkrafa. Opnast með „Dagbók dagsins“ á forsíðu.
-- **Morgunn:** svefn (frá–til, appið reiknar klukkustundir), svefngæði 1–5, orka 0–10. Svefn tilheyrir deginum sem þú vaknar.
-- **Kvöld:** skap 0–10, át (venjulegt, meira, minna), spurning um hugsanir um að vilja ekki vera til (svar Já sýnir 1717 og 112), eitt lítið jákvætt.
-- **Erfitt augnablik:** opnar hugsanaskrá beint í Aðstæðum.
+- **Morgunn:** svefn (frá–til, appið reiknar klukkustundir), svefngæði 1–5, orka 0–10, skap 0–10, þakklæti (frjáls texti). Svefn tilheyrir deginum sem þú vaknar.
+- **Kvöld:** skap 0–10, skref yfir daginn, át (venjulegt, meira, minna).
+- **Skrá líðan** (tilfinning með styrk) er hnappur í báðum hlutum.
 - **Dagsyfirlit:** ýttu á dag í vikuræmu eða dagatali. Sýnir dagbók, skráningar dagsins og lit tilfinninga.
-- Dagbókin hefur engin áhrif á stöðulit hugsanaskráninga. Hún fylgir með í afriti. Svar við spurningunni um að vilja ekki vera til fer ekki í textaútflutning.
-- Áminning á kvöldin (eftir kl. 20) er aðeins á forsíðu appsins. Hægt að slökkva í Gögn.
+- Dagbókin hefur engin áhrif á stöðulit hugsanaskráninga. Hún fylgir með í afriti og textaútflutningi.
+- Engar áminningar eru í appinu. Mundu að taka afrit í Gögn.
 
 ## Skrár
 | Skrá | Hlutverk |
@@ -50,7 +50,7 @@ Ein stutt dagleg skráning, óháð hugsanaskrám. Allt valfrjálst og vistast s
 3. Opnaðu slóðina í Safari (iPhone) eða Chrome (Android) > Add to Home Screen.
 
 ## Uppfæra
-Þegar þú breytir einhverri skrá, hækkaðu `VERSION` í `sw.js` (t.d. `hugsanaskra-v13`).
+Þegar þú breytir einhverri skrá, hækkaðu `VERSION` í `sw.js` (t.d. `hugsanaskra-v14`).
 Annars sækir síminn gömlu útgáfuna úr skyndiminni.
 
 ## Gögn og afrit

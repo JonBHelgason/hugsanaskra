@@ -148,16 +148,16 @@ const saveEntries = () => writeJSON(KEY, entries);
                           eat 'venjulegt'|'meira'|'minna', dark 'ja'|'nei', pos (texti)}
    Svefn tilheyrir deginum sem þú vaknar. Dagbókin hefur engin áhrif á stöðulit skráninga. */
 const KEY_D = 'hugsanaskra_diary';
-const DJ0 = () => ({sleepFrom:'', sleepTo:'', sleepQ:null, energy:null, mood:null, eat:'', dark:'', pos:''});
+const DJ0 = () => ({sleepFrom:'', sleepTo:'', sleepQ:null, energy:null, moodAm:null, mood:null, steps:null, eat:'', grat:'', pos:''});
 function cleanDay(x){
   x = x || {};
   const n = (v,lo,hi) => { if(v===null||v===undefined||v==='') return null; v = Math.round(+v); return isNaN(v) ? null : Math.min(hi,Math.max(lo,v)); };
   const t = v => /^\d\d:\d\d$/.test(v) ? v : '';
-  return {sleepFrom:t(x.sleepFrom), sleepTo:t(x.sleepTo), sleepQ:n(x.sleepQ,1,5), energy:n(x.energy,0,10), mood:n(x.mood,0,10),
-    eat:['venjulegt','meira','minna'].includes(x.eat)?x.eat:'', dark:['ja','nei'].includes(x.dark)?x.dark:'', pos:String(x.pos||'')};
+  /* pos (eitt lítið jákvætt) er ekki lengur sýnt en gömul gögn eru ekki eydd */
+  return {sleepFrom:t(x.sleepFrom), sleepTo:t(x.sleepTo), sleepQ:n(x.sleepQ,1,5), energy:n(x.energy,0,10), moodAm:n(x.moodAm,0,10), mood:n(x.mood,0,10),
+    steps:n(x.steps,0,200000), eat:['venjulegt','meira','minna'].includes(x.eat)?x.eat:'', grat:String(x.grat||''), pos:String(x.pos||'')};
 }
-const hasDay = d => !!(d.sleepFrom||d.sleepTo||d.sleepQ!==null||d.energy!==null||d.mood!==null||d.eat||d.dark||d.pos.trim());
-const eveningDone = d => !!d && (d.mood!==null||d.eat||d.dark||d.pos.trim());
+const hasDay = d => !!(d.sleepFrom||d.sleepTo||d.sleepQ!==null||d.energy!==null||d.moodAm!==null||d.mood!==null||d.steps!==null||d.eat||d.grat.trim()||d.pos.trim());
 let diary = (()=>{ const o = readJSON(KEY_D, {}), out = {};
   Object.keys(o||{}).forEach(k=>{ if(/^\d{4}-\d\d-\d\d$/.test(k)){ const d = cleanDay(o[k]); if(hasDay(d)) out[k] = d; } });
   return out; })();
@@ -252,13 +252,6 @@ function render(){
 }
 
 /* ----- Heim ----- */
-function backupBanner(){
-  if(!entries.length) return '';
-  const last = meta.lastBackup ? (Date.now()-new Date(meta.lastBackup))/86400000 : Infinity;
-  if(last <= 30) return '';
-  return `<div class="card"><b>Mundu eftir afriti</b><br><span class="muted">${meta.lastBackup?'Síðasta afrit er meira en mánaðargamalt.':'Þú hefur ekki tekið afrit enn.'}</span>
-    <button class="big" data-a="nav" data-v="data">Taka afrit</button></div>`;
-}
 const WD = ['M','Þ','M','F','F','L','S'];       // vikudagar frá mánudegi
 function viewHome(){
   const now = new Date(), today = dateOnly(now), mon = mondayOf(now), h = now.getHours();
@@ -270,9 +263,6 @@ function viewHome(){
       style="--c:${col||'transparent'}" data-a="day" data-d="${key}">${col?'':'+'}</button></div>`;
   }).join('');
   return `<h1>Hvernig líður þér ${when}?</h1>
-    ${backupBanner()}
-    ${reminderBanner()}
-    ${eveningBanner()}
     <div class="week">${days}</div>
     <button class="plus" data-a="newRec" aria-label="Skrá hugsun">+</button>
     <div class="plusl">Skrá hugsun</div>
@@ -307,27 +297,13 @@ function recentList(){
   return h || '<p class="muted">Engar nýlegar skráningar.</p>';
 }
 
-/* ----- Áminning um endurmat (aðeins í appinu, engar tilkynningar) ----- */
-const reHours = () => meta.reHours===undefined ? 24 : meta.reHours;     // 0 = aldrei
-const ageHours = r => (Date.now() - new Date(r.time)) / 3600000;
-const ageTxt = r => { const h = ageHours(r); return h<1 ? 'núna' : h<48 ? `fyrir ${Math.floor(h)} klst` : `fyrir ${Math.floor(h/24)} d`; };
-const isLate = r => recStatus(r)==='y' && reHours()>0 && ageHours(r) > reHours();
-function reminderBanner(){
-  const late = entries.filter(isLate).sort((a,b)=>a.time.localeCompare(b.time));
-  if(!late.length) return '';
-  return `<div class="card remind"><b>${late.length===1?'1 skráning bíður':late.length+' skráningar bíða'} endurmats</b><br>
-    <span class="muted">Eldri en ${reHours()} klst. Gott er að endurmeta sem fyrst.</span>
-    <button class="big" data-a="open" data-id="${esc(late[0].id)}">Opna elstu</button></div>`;
-}
-
 /* Spjald í lista (heim og dagatal). Drög eru merkt. */
 function entryCard(r){
   const titles = r.situations.map(s=>s.title).filter(Boolean).join(' · ');
   const emo = r.emotions.map(x=>`${esc(x.w)} ${x.s}${x.s2!==null?' → '+x.s2:''}`).join(', ');
   const th = (r.thoughts.find(t=>t.text.trim()) || {}).text || '';
-  const late = ['r','y'].includes(recStatus(r));
   return `<div class="card entry st-${recStatus(r)}" data-a="open" data-id="${esc(r.id)}">
-    <div class="when">${esc(fmtTime(r.time))} ${stBadge(r)}${late?` <span class="${isLate(r)?'late':''}">· ${ageTxt(r)}</span>`:''}</div>
+    <div class="when">${esc(fmtTime(r.time))} ${stBadge(r)}</div>
     ${titles?`<div><b>${esc(titles)}</b></div>`:''}
     ${emo?`<div class="small">${emo}</div>`:''}
     ${th?`<div class="snip muted">${esc(snip(th,110))}</div>`:''}
@@ -372,15 +348,6 @@ function viewDetail(){
 }
 
 /* ----- Dagatal ----- */
-/* Kvöldáminning: aðeins í appinu (engar tilkynningar), eftir kl. 20 ef kvöldhluti er óskráður */
-function eveningBanner(){
-  if(meta.eveRemind===false) return '';
-  const now = new Date(); if(now.getHours()<20) return '';
-  if(eveningDone(diary[dateOnly(now)])) return '';
-  return `<div class="card remind"><b>Kvölddagbók</b><br><span class="muted">Ef þú vilt, tekur 1–2 mínútur.</span>
-    <button class="big" data-a="openDiaryDay" data-d="${dateOnly(now)}" data-p="e">Opna kvölddagbók</button></div>`;
-}
-
 /* ----- Dagsyfirlit ----- */
 function viewDay(){
   const key = current, d = diary[key], es = dayEntries(key).sort((a,b)=>b.time.localeCompare(a.time)), col = dayColor(key);
@@ -390,8 +357,10 @@ function viewDay(){
   if(d){
     const h = sleepHours(d);
     rows = row('Svefn', [d.sleepFrom&&d.sleepTo?`${d.sleepFrom}–${d.sleepTo}`:'', h!==null?`${fmtNum(h)} klst`:'', d.sleepQ!==null?`gæði ${d.sleepQ}/5`:''].filter(Boolean).map(esc).join(' · '))
-      + row('Orka', d.energy!==null ? `${d.energy}/10` : '') + row('Skap', d.mood!==null ? `${d.mood}/10` : '')
-      + row('Át', esc(EAT_TXT[d.eat]||'')) + row('Jákvætt', esc(d.pos.trim()));
+      + row('Orka', d.energy!==null ? `${d.energy}/10` : '')
+      + row('Skap', [d.moodAm!==null?`morgun ${d.moodAm}/10`:'', d.mood!==null?`kvöld ${d.mood}/10`:''].filter(Boolean).join(' · '))
+      + row('Skref', d.steps!==null ? esc(d.steps.toLocaleString('is-IS')) : '')
+      + row('Át', esc(EAT_TXT[d.eat]||'')) + row('Þakklæti', esc(d.grat.trim()));
   }
   return `<h1 class="dh" style="text-transform:capitalize">${esc(title)}</h1>
     <div class="daybig" style="background:${col||'transparent'}" title="Litir tilfinninga dagsins"></div>
@@ -411,23 +380,23 @@ function viewDiary(){
   const key = current, d = diary[key] || DJ0(), today = dateOnly(new Date());
   const title = new Date(key+'T12:00').toLocaleDateString('is-IS',{weekday:'long',day:'numeric',month:'long'});
   const h = sleepHours(d);
+  const moodBtn = `<button class="big" data-a="moodDay" data-d="${key}">Skrá líðan (tilfinning)</button>`;
   const morning = `
     <label>Svefn <small>frá og til</small></label>
     <div class="row"><input type="time" data-k="dj-sfrom" value="${esc(d.sleepFrom)}" aria-label="Sofnaði"><input type="time" data-k="dj-sto" value="${esc(d.sleepTo)}" aria-label="Vaknaði"></div>
     <p class="small" id="djhours" style="margin:6px 0 0">${h!==null?fmtNum(h)+' klst':''}</p>
     <label>Svefngæði <small>1–5</small></label>${djSeg([1,2,3,4,5].map(n=>[n,n]), d.sleepQ, 'djSq')}
-    <label>Orka <small>0–10</small></label>${djSlider('dj-en','energy',d.energy)}`;
-  const dark = d.dark==='ja' ? `<div class="card calm"><b>Takk fyrir að segja frá.</b>
-      <p>Þú þarft ekki að bera þetta ein(n). Hjálparsíminn 1717 er opinn allan sólarhringinn. Ef þú ert í hættu núna, hringdu í 112.</p>
-      <p>Segðu lækninum eða sálfræðingnum frá þessu í næsta tíma.</p>
-      <div class="row"><a class="telbtn" href="tel:1717">Hringja í 1717</a><a class="telbtn" href="tel:112">Hringja í 112</a></div></div>` : '';
+    <label>Orka <small>0–10</small></label>${djSlider('dj-en','energy',d.energy)}
+    <label>Skap <small>0–10</small></label>${djSlider('dj-moodam','moodAm',d.moodAm)}
+    <label for="djgrat">Þakklæti <small>það sem ég er þakklátur fyrir</small></label>
+    <textarea id="djgrat" data-k="dj-grat" style="min-height:84px">${esc(d.grat)}</textarea>
+    ${moodBtn}`;
   const evening = `
     <label>Skap <small>0–10</small></label>${djSlider('dj-mood','mood',d.mood)}
+    <label for="djsteps">Skref yfir daginn</label>
+    <div class="beliefrow"><input type="number" inputmode="numeric" min="0" id="djsteps" data-k="dj-steps" value="${d.steps===null?'':d.steps}" placeholder="t.d. 8000" style="flex:1"></div>
     <label>Át</label>${djSeg([['venjulegt','Venjulegt'],['meira','Meira en venjulega'],['minna','Minna en venjulega']], d.eat, 'djEat')}
-    <label>Hugsanir um að vilja ekki vera til?</label>${djSeg([['ja','Já'],['nei','Nei']], d.dark, 'djDark')}
-    ${dark}
-    <label for="djpos">Eitt lítið jákvætt</label><input type="text" id="djpos" data-k="dj-pos" value="${esc(d.pos)}" placeholder="Ein lína">
-    <button class="big" data-a="hardMoment" style="margin-top:22px">Erfitt augnablik: opna hugsanaskrá</button>`;
+    ${moodBtn}`;
   return `<button class="linkbtn" data-a="day" data-d="${key}" style="margin:0">‹ Dagsyfirlit</button>
     <h1 style="margin-top:0">Dagbók</h1>
     <div class="row" style="margin-bottom:12px"><input type="date" data-change="djDay" value="${key}" max="${today}"></div>
@@ -547,22 +516,6 @@ function viewData(){
       <p class="muted" style="font-size:14px;margin:0">Á símanum opnast deilingarvalmynd.</p>
     </div>
 
-    <h2>Áminning um endurmat</h2>
-    <div class="card">
-      <label for="rehours" style="margin-top:0">Minna á endurmat eftir</label>
-      <select id="rehours" data-change="reHours">
-        ${[[12,'12 klst'],[24,'24 klst'],[48,'48 klst'],[0,'Aldrei']].map(([v,t])=>`<option value="${v}"${reHours()===v?' selected':''}>${t}</option>`).join('')}
-      </select>
-      <p class="muted" style="font-size:14px;margin:8px 0 0">Tímamörkin eru stillanleg. Spurðu sálfræðinginn hvað hentar.</p>
-    </div>
-
-    <h2>Kvölddagbók</h2>
-    <div class="card">
-      <label for="eveRemind" style="margin-top:0">Áminning á forsíðu eftir kl. 20</label>
-      <select id="eveRemind" data-change="eveRemind"><option value="on"${meta.eveRemind===false?'':' selected'}>Já</option><option value="off"${meta.eveRemind===false?' selected':''}>Nei</option></select>
-      <p class="muted" style="font-size:14px;margin:8px 0 0">Aðeins í appinu. Appið sendir engar tilkynningar.</p>
-    </div>
-
     <h2>Afrit og innflutningur</h2>
     <div class="card">
       <p style="margin-top:0">${entries.length} skráningar í símanum.<br>
@@ -620,13 +573,14 @@ function exportTxt(){
       if(r.legacy.did) t += `Hvað ég gerði: ${r.legacy.did}${r.legacy.helped?' (hjálpaði: '+r.legacy.helped+')':''}\n`;
     }
   });
-  /* Dagbók (án svars um hugsanir um að vilja ekki vera til; það kemur í læknayfirliti seinna) */
+  /* Dagbók */
   const dj = Object.keys(diary).filter(k=>k>=exFrom && k<=exTo).sort();
   if(dj.length){
     t += `\n\nDAGBÓK\n`;
     dj.forEach(k=>{ const d = diary[k], h = sleepHours(d);
       t += `${k}: ` + [d.sleepFrom&&d.sleepTo?`svefn ${d.sleepFrom}–${d.sleepTo}${h!==null?' ('+fmtNum(h)+' klst)':''}`:'', d.sleepQ!==null?`svefngæði ${d.sleepQ}/5`:'', d.energy!==null?`orka ${d.energy}/10`:'',
-        d.mood!==null?`skap ${d.mood}/10`:'', d.eat?`át: ${EAT_TXT[d.eat].toLowerCase()}`:'', d.pos.trim()?`jákvætt: ${d.pos.trim()}`:''].filter(Boolean).join(', ') + `\n`; });
+        d.moodAm!==null?`skap morgun ${d.moodAm}/10`:'', d.mood!==null?`skap kvöld ${d.mood}/10`:'', d.steps!==null?`skref ${d.steps}`:'', d.eat?`át: ${EAT_TXT[d.eat].toLowerCase()}`:'',
+        d.grat.trim()?`þakklæti: ${d.grat.trim().replace(/\s*\n\s*/g,' / ')}`:''].filter(Boolean).join(', ') + `\n`; });
   }
   shareOrDownload(`hugsanaskra_${exFrom}_${exTo}.txt`, 'text/plain', t);
 }

@@ -389,6 +389,7 @@ function drawStage(){
 }
 
 /* ---------- 6. AÐGERÐIR OG ATBURÐIR ---------- */
+const DJ_FLD = {'dj-en':'energy','dj-moodam':'moodAm','dj-mood':'mood'};
 const newSit = () => ({id:newId(), title:'', desc:'', tags:{tema:[], folk:[], stadur:[]}});
 const nowFor = key => key===dateOnly(new Date()) ? toLocalInput(new Date()) : key+'T12:00';
 
@@ -411,10 +412,7 @@ const actions = {
   djPart: el => { diaryPart = el.dataset.p; render(); },
   djSq: el => { const d = getDay(current), v = +el.dataset.v; d.sleepQ = d.sleepQ===v ? null : v; saveDay(current); render(); },
   djEat: el => { const d = getDay(current); d.eat = d.eat===el.dataset.v ? '' : el.dataset.v; saveDay(current); render(); },
-  djDark: el => { const d = getDay(current); d.dark = d.dark===el.dataset.v ? '' : el.dataset.v; saveDay(current); render(); },
   djClear: el => { getDay(current)[el.dataset.f] = null; saveDay(current); render(); },
-  /* Erfitt augnablik: hugsanaskrá opnast beint í Aðstæðum (ekkert nýtt form) */
-  hardMoment: () => { const key = current; startForm(newRec(nowFor(key))); fmode = 'pager'; colIdx = 0; renderForm(); },
   moodDay: el => { const m = newMood(); m.time = nowFor(el.dataset.d); startForm(m); },
   calDay: el => { calSel = calSel===el.dataset.d ? null : el.dataset.d; render(); },
   calNav: el => { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth()+(+el.dataset.d), 1); calSel = null; render(); },
@@ -539,8 +537,9 @@ document.addEventListener('input', e=>{
   else if(k.startsWith('dj-')){
     const d = getDay(current);
     if(k==='dj-sfrom') d.sleepFrom = v; else if(k==='dj-sto') d.sleepTo = v;
-    else if(k==='dj-pos') d.pos = v;
-    else { const fld = k==='dj-en' ? 'energy' : 'mood'; d[fld] = +v; $('djv-'+fld).textContent = v; }
+    else if(k==='dj-grat') d.grat = v;
+    else if(k==='dj-steps') d.steps = v==='' ? null : Math.max(0, Math.round(+v));
+    else { const fld = DJ_FLD[k]; d[fld] = +v; $('djv-'+fld).textContent = v; }
     if(k==='dj-sfrom' || k==='dj-sto'){ const h = sleepHours(d); $('djhours').textContent = h!==null ? fmtNum(h)+' klst' : ''; }
     saveDay(current);
   }
@@ -549,8 +548,8 @@ document.addEventListener('input', e=>{
 /* Sleði sem er ekki búinn að fá gildi: snerting án hreyfingar setur gildið (50) */
 document.addEventListener('pointerup', e=>{
   const el = e.target, k = el.dataset && el.dataset.k;
-  if(view==='diary' && (k==='dj-en' || k==='dj-mood')){
-    const fld = k==='dj-en' ? 'energy' : 'mood', d = getDay(current);
+  if(view==='diary' && DJ_FLD[k]){
+    const fld = DJ_FLD[k], d = getDay(current);
     if(d[fld]===null){ d[fld] = +el.value; $('djv-'+fld).textContent = el.value; saveDay(current); }
     return;
   }
@@ -568,8 +567,6 @@ document.addEventListener('change', e=>{
   if(el.dataset.k==='time' && rec && el.value){ rec.time = el.value; touch(); }
   if(el.dataset.change==='statsDays'){ statsDays = +el.value; render(); }
   if(el.dataset.change==='djDay' && el.value){ go('diary', el.value); }
-  if(el.dataset.change==='eveRemind'){ meta.eveRemind = el.value!=='off'; saveMeta(); render(); }
-  if(el.dataset.change==='reHours'){ meta.reHours = +el.value; saveMeta(); render(); }
 });
 $('importFile').addEventListener('change', e=>{
   const f = e.target.files[0]; if(f) importData(f); e.target.value = '';
